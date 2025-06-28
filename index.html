@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Jump Stones</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/style.css?v=1.0.2">
+  <meta name="theme-color" content="#87ceeb" />
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+</head>
+<body>
+  <div id="container">
+    <canvas id="game"></canvas>
+    <div id="controls-area">
+      <div class="btn" id="jump">▲</div>
+      <div class="btn" id="menu-btn">≡</div>
+      <div class="btn-group">
+        <div class="btn" id="left">◀</div>
+        <div class="btn" id="right">▶</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="hud">Vidas: <span id="lives">3</span></div>
+
+  <div id="menu-modal">
+    <div class="menu-content">
+      <h3>Menu</h3>
+      <button id="fullscreen-btn" class="menu-btn">Tela Cheia</button>
+      <button id="music-toggle" class="menu-btn">🔊 Desligar Música</button>
+      <button id="exit-btn" class="menu-btn">Sair do Jogo</button>
+    </div>
+  </div>
+
+  <!-- Elementos de áudio -->
+  <audio id="background-music" loop>
+    <source src="sound/musiclevel01.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="sound-life">
+    <source src="sound/life.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="sound-spike">
+    <source src="sound/spike.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="sound-water">
+    <source src="sound/water.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="sound-enemy">
+    <source src="sound/enemy.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="sound-enemy-die">
+    <source src="sound/enemydie.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="sound-checkpoint">
+    <source src="sound/checkpoint.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="sound-finish">
+    <source src="sound/finish.mp3" type="audio/mpeg">
+  </audio>
+  <audio id="sound-jump">
+    <source src="sound/jump.mp3" type="audio/mpeg">
+  </audio>
+
+ <script src="js/game.js?v=1.0.2"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('service-worker.js')
+          .then(reg => console.log("Service Worker registrado!", reg))
+          .catch(err => console.error("Erro ao registrar SW", err));
+      });
+    }
+  </script>
+</body>
+</html>

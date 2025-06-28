@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8" />
+  <title>Game Over</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Press Start 2P', monospace;
+      color: white;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      background: linear-gradient(270deg, #111, #1a1a1a, #111);
+      background-size: 600% 600%;
+      animation: glowMove 10s ease infinite;
+    }
+
+    @keyframes glowMove {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    h1 {
+      font-size: 28px;
+      margin-bottom: 40px;
+      color: #00ccff;
+      text-shadow: 2px 2px #000, -1px -1px #000;
+    }
+
+    .game-over-btn {
+      padding: 12px 24px;
+      margin: 10px;
+      font-size: 12px;
+      border: 2px solid #00ccff;
+      border-radius: 6px;
+      background: linear-gradient(to bottom, #00ccff, #006b8f);
+      color: #fff;
+      text-shadow: 1px 1px #000;
+      box-shadow: 0 0 10px #00ccff;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .game-over-btn:hover {
+      transform: scale(1.1);
+      box-shadow: 0 0 20px #00ccff;
+    }
+
+    .exit {
+      background: linear-gradient(to bottom, #ff3b3b, #990000);
+      border-color: #ff3b3b;
+      box-shadow: 0 0 10px #ff3b3b;
+    }
+
+    .exit:hover {
+      box-shadow: 0 0 20px #ff3b3b;
+    }
+  </style>
+</head>
+<body>
+  <h1>FIM DE JOGO</h1>
+  <button class="game-over-btn" onclick="window.location.href='/'">Jogar Novamente</button>
+  <button class="game-over-btn exit" onclick="window.location.href='https://google.com'">Sair</button>
+</body>
+</html>
