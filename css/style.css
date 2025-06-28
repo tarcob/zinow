@@ -85,8 +85,29 @@ html, body {
   color: white;
   padding: 5px 10px;
   border-radius: 6px;
-  font-size: 16px;
+  font-size: 32px;
+  font-family: 'Bungee', cursive;
+    text-shadow:
+    -1px -1px 0 black,
+     1px -1px 0 black,
+    -1px  1px 0 black,
+     1px  1px 0 black;
+     -webkit-text-stroke: 1px black;
   z-index: 1000;
+  
+  /* Adicione estas propriedades para alinhamento */
+  display: flex;
+  align-items: center;    /* Alinha verticalmente */
+  justify-content: center; /* Alinha horizontalmente */
+  gap: 8px;               /* Espaço entre imagem e texto */
+
+  user-select: none;          /* Padrão moderno */
+  -webkit-user-select: none;  /* Safari, Chrome */
+  -moz-user-select: none;     /* Firefox */
+  -ms-user-select: none;      /* IE/Edge antigos */
+
+  pointer-events: none;       /* Impede clique/pressão em qualquer elemento dentro */
+
 }
 
 #lives.hidden {
