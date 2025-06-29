@@ -155,9 +155,9 @@ images.enemy01Walk.src = "img/enemy01_walk.png?v=1";
 images.enemy01WalkFlipped.src = "img/enemy01_walk_flipped.png?v=1";
 images.enemy01Die.src = "img/enemy01_die.png?v=1";
 images.enemy01DieFlipped.src = "img/enemy01_die_flipped.png?v=1";
-images.decoGrass.src = '/img/decograss.png';
-images.decor01.src = "/img/decor01.png?v=1";
-images.groundBottom.src = "/img/ground_bottom.png?v=1";
+images.decoGrass.src = 'img/decograss.png';
+images.decor01.src = "img/decor01.png?v=1";
+images.groundBottom.src = "img/ground_bottom.png?v=1";
 
 const checkpointSprite = {
   image: new Image(),
@@ -254,19 +254,7 @@ const tileMap = [
 "🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫",
 ];
   
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
-  
+
   
   
 
