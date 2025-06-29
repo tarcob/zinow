@@ -138,6 +138,8 @@ const images = {
   groundBottom: new Image()
 };
 
+
+
 // Caminhos corrigidos para imagens
 images.ground.src = "img/ground.png?v=1";
 images.groundGrass.src = "img/ground_grass_top.png?v=1";
@@ -158,6 +160,10 @@ images.enemy01DieFlipped.src = "img/enemy01_die_flipped.png?v=1";
 images.decoGrass.src = 'img/decograss.png';
 images.decor01.src = "img/decor01.png?v=1";
 images.groundBottom.src = "img/ground_bottom.png?v=1";
+
+const mountainLayer = new Image();
+mountainLayer.src = "img/montanhas-parallax.png?v=1";
+
 
 const checkpointSprite = {
   image: new Image(),
@@ -653,7 +659,17 @@ objects.tiles
 }
 
 function draw() {
+
+  
+
   ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+// Paralaxe de montanhas (move mais devagar que o jogador)
+const parallaxX = -cameraX * 0.3; // 0.3 = velocidade mais lenta (paralaxe)
+ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450); // altura = base da tela
+
+
+  
   objects.tiles.forEach(tile => {
     if (tile.type === "ground" && images.ground.complete) {
       ctx.drawImage(images.ground, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
@@ -751,6 +767,11 @@ function draw() {
     });
   }
 
+
+
+
+
+
   const spriteSet = playerSprite.state;
   const frame = playerSprite.frame;
   const imgKey = spriteSet + (playerSprite.facing === 'left' ? 'Flipped' : '');
@@ -763,6 +784,8 @@ function draw() {
     ctx.fillStyle = '#4caf50';
     ctx.fillRect(player.x - cameraX, player.y - cameraY, player.width, player.height);
   }
+
+  
 }
 
 function loop() {
