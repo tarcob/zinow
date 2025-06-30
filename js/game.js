@@ -419,15 +419,26 @@ function resolveCollision(r) {
   }
 }
 
-function handleDeath() {
+
+function pauseGameForSeconds(seconds) {
+  isGamePaused = true;
+  return new Promise(resolve => {
+    setTimeout(() => {
+      isGamePaused = false;
+      resolve();
+    }, seconds * 1000);
+  });
+}
+
+
+async function handleDeath() {
     lives--;
     livesDisplay.textContent = lives;
 
     if (lives < 1) {
         livesDisplay.classList.add('hidden');
-        setTimeout(() => {
-            triggerGameOver();
-        }, 500);
+        await pauseGameForSeconds(1);
+        triggerGameOver();
         return;
     } else {
         livesDisplay.classList.remove('hidden');
@@ -437,6 +448,8 @@ function handleDeath() {
     if (objects.finish) {
         objects.finish.active = true;
     }
+
+    await pauseGameForSeconds(1); // Aguarda 2 segundos antes de respawn
 
     const spawn = lastCheckpoint || startPosition;
     Object.assign(player, spawn, { 
@@ -632,9 +645,10 @@ if (objects.finish && objects.finish.active) {
     if (checkCollision(player, finishBox)) {
         objects.finish.active = false; // Desativa para não tocar o som novamente
         soundFinish.play();
+        isGamePaused = true; // Pausa o jogo imediatamente
         setTimeout(() => {
             window.location.href = "index2.html";
-        }, 600);
+        }, 2000); // Aguarda 2 segundos antes de mudar de fase
     }
 }
 
@@ -664,42 +678,31 @@ if (objects.finish && objects.finish.active) {
 }
 
 function draw() {
-
-  
-
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-// Paralaxe de montanhas (move mais devagar que o jogador)
-const parallaxX = -cameraX * 0.3; // 0.3 = velocidade mais lenta (paralaxe)
-ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450); // altura = base da tela
+  // Paralaxe de montanhas (move mais devagar que o jogador)
+  const parallaxX = -cameraX * 0.3;
+  ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450);
 
-
-  
+  // Desenha tiles do cenário
   objects.tiles.forEach(tile => {
     if (tile.type === "ground" && images.ground.complete) {
       ctx.drawImage(images.ground, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
     } else if (tile.type === "ground-fake" && images.ground.complete) {
-  ctx.drawImage(images.ground, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
-}    else if (tile.type === "ground-bottom" && images.groundBottom.complete) {
-  ctx.drawImage(images.groundBottom, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
- }  else if (tile.type === "ground-grass" && images.groundGrass.complete) {
-  ctx.drawImage(images.groundGrass, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
-   }else if (tile.type === "ground-grass-right" && images.groundGrassRight.complete) {
-  ctx.drawImage(images.groundGrassRight, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
-} else if (tile.type === "ground-grass-left" && images.groundGrassLeft.complete) {
-  ctx.drawImage(images.groundGrassLeft, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
-  }else if (tile.type === "decoGrass" && images.decoGrass.complete) {
-    ctx.drawImage(images.decoGrass, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
-  }else if (tile.type === "decor01" && images.decor01.complete) {
-  ctx.drawImage(
-    images.decor01,
-    tile.x - cameraX,
-    tile.y - cameraY + 6, // desloca visualmente pra baixo 6px
-    tile.width,
-    tile.height
-  );
-
-  }else if (tile.type === "water" && waterSprite.image.complete) {
+      ctx.drawImage(images.ground, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
+    } else if (tile.type === "ground-bottom" && images.groundBottom.complete) {
+      ctx.drawImage(images.groundBottom, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
+    } else if (tile.type === "ground-grass" && images.groundGrass.complete) {
+      ctx.drawImage(images.groundGrass, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
+    } else if (tile.type === "ground-grass-right" && images.groundGrassRight.complete) {
+      ctx.drawImage(images.groundGrassRight, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
+    } else if (tile.type === "ground-grass-left" && images.groundGrassLeft.complete) {
+      ctx.drawImage(images.groundGrassLeft, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
+    } else if (tile.type === "decoGrass" && images.decoGrass.complete) {
+      ctx.drawImage(images.decoGrass, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
+    } else if (tile.type === "decor01" && images.decor01.complete) {
+      ctx.drawImage(images.decor01, tile.x - cameraX, tile.y - cameraY + 6, tile.width, tile.height);
+    } else if (tile.type === "water" && waterSprite.image.complete) {
       drawAnimatedWater(tile);
     } else {
       ctx.fillStyle = tile.color;
@@ -707,6 +710,7 @@ ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450); // altura = base d
     }
   });
 
+  // Desenha plataformas
   objects.platforms.forEach(p => {
     if (images.platform.complete) {
       ctx.drawImage(images.platform, p.x - cameraX, p.y - cameraY, p.width, p.height);
@@ -716,12 +720,14 @@ ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450); // altura = base d
     }
   });
 
+  // Desenha espinhos
   objects.spikes.forEach(s => {
     if (images.spike.complete) {
       ctx.drawImage(images.spike, s.x - cameraX, s.y - cameraY, s.width, s.height);
     }
   });
 
+  // Desenha checkpoints
   objects.checkpoints.forEach(cp => {
     ctx.drawImage(
       checkpointSprite.image,
@@ -732,6 +738,7 @@ ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450); // altura = base d
     );
   });
 
+  // Desenha finish
   if (objects.finish) {
     ctx.drawImage(
       finishSprite.image,
@@ -744,6 +751,7 @@ ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450); // altura = base d
     );
   }
 
+  // Desenha inimigos
   objects.enemies.forEach(e => {
     const eSpriteSet = e.state;
     const eFrame = e.frame;
@@ -760,6 +768,7 @@ ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450); // altura = base d
     }
   });
 
+  // Desenha vidas
   if (objects.lives) {
     objects.lives.forEach(life => {
       const sx = lifeSprite.currentFrame * lifeSprite.frameWidth;
@@ -772,11 +781,31 @@ ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450); // altura = base d
     });
   }
 
+  // Verifica colisão com água
+  const isInWater = objects.tiles.some(tile => 
+    tile.type === "water" && 
+    player.x + player.width > tile.x && 
+    player.x < tile.x + tile.width && 
+    player.y + player.height > tile.y && 
+    player.y < tile.y + tile.height
+  );
 
+  // Efeito splash ao entrar na água
+  if (isInWater && !player.wasInWater) {
+    createWaterSplash(player.x + player.width/2, player.y + player.height);
+  }
+  player.wasInWater = isInWater;
 
+  // Desenha partículas da água
+  drawWaterParticles();
 
+  // DESENHA O PLAYER APENAS SE NÃO ESTIVER NA ÁGUA
+  if (!isInWater) {
+    drawPlayer();
+  }
+}
 
-
+function drawPlayer() {
   const spriteSet = playerSprite.state;
   const frame = playerSprite.frame;
   const imgKey = spriteSet + (playerSprite.facing === 'left' ? 'Flipped' : '');
@@ -789,8 +818,43 @@ ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450); // altura = base d
     ctx.fillStyle = '#4caf50';
     ctx.fillRect(player.x - cameraX, player.y - cameraY, player.width, player.height);
   }
+}
 
-  
+// Sistema de partículas para o splash
+let waterParticles = [];
+
+function createWaterSplash(x, y) {
+  for (let i = 0; i < 15; i++) {
+    waterParticles.push({
+      x: x,
+      y: y,
+      vx: (Math.random() - 0.5) * 5,
+      vy: -Math.random() * 5,
+      size: Math.random() * 3 + 2,
+      life: 30 + Math.random() * 20
+    });
+  }
+}
+
+function drawWaterParticles() {
+  for (let i = 0; i < waterParticles.length; i++) {
+    const p = waterParticles[i];
+    
+    ctx.fillStyle = 'rgba(100, 200, 255, 0.7)';
+    ctx.beginPath();
+    ctx.arc(p.x - cameraX, p.y - cameraY, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1; // gravidade
+    p.life--;
+    
+    if (p.life <= 0) {
+      waterParticles.splice(i, 1);
+      i--;
+    }
+  }
 }
 
 function loop() {

@@ -23,13 +23,11 @@ html, body {
   z-index: 0;
   pointer-events: none;
   background: linear-gradient(to bottom, 
-  #beebff 0%, 
-  #0aaadb 50%, 
-  #235d81 100%
-);
+    #beebff 0%, 
+    #0aaadb 50%, 
+    #235d81 100%
+  );
 }
-
-
 
 #game {
   position: relative;
@@ -37,7 +35,7 @@ html, body {
   display: block;
   width: 100%;
   height: calc(100% - 90px);
-  background: none;;
+  background: none;
 }
 
 @keyframes moveMountains {
@@ -45,26 +43,58 @@ html, body {
   100% { transform: translateX(-50%); }
 }
 
-
+/* <<< ALTERADO: reposicionamento dos controles */
 #controls-area {
   position: fixed;
   bottom: 0;
-  left: 0;
-  right: 0;
+  width: 100%;
   height: 90px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 20px;
   background: rgba(0, 0, 0, 0.7);
   z-index: 100;
+  pointer-events: none;
 }
 
-.btn-group {
+/* <<< NOVOS GRUPOS LATERAIS FIXOS */
+#jump-group {
+  position: absolute;
+  left: 20px;
+  bottom: 15px;
   display: flex;
   gap: 15px;
+  pointer-events: auto;
 }
 
+#move-group {
+  position: absolute;
+  right: 20px;
+  bottom: 15px;
+  display: flex;
+  gap: 15px;
+  pointer-events: auto;
+}
+
+/* <<< BOTÃO CENTRALIZADO */
+#menu-btn {
+  position: absolute;
+  left: 50%;
+  bottom: 15px;
+  transform: translateX(-50%);
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  font-weight: bold;
+  font-size: 24px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  pointer-events: auto;
+  z-index: 101;
+}
+
+/* <<< ESTILO BASE DOS BOTÕES */
 .btn {
   width: 60px;
   height: 60px;
@@ -86,15 +116,6 @@ html, body {
   background: rgba(255, 255, 255, 0.9);
 }
 
-#menu-btn {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(255, 255, 255, 0.9);
-  color: #333;
-  font-weight: bold;
-}
-
 #jump {
   background: #f44336;
 }
@@ -113,35 +134,85 @@ html, body {
   border-radius: 6px;
   font-size: 32px;
   font-family: 'Bungee', cursive;
-    text-shadow:
+  text-shadow:
     -1px -1px 0 black,
      1px -1px 0 black,
     -1px  1px 0 black,
      1px  1px 0 black;
-     -webkit-text-stroke: 1px black;
+  -webkit-text-stroke: 1px black;
   z-index: 1000;
-  
-  /* Adicione estas propriedades para alinhamento */
   display: flex;
-  align-items: center;    /* Alinha verticalmente */
-  justify-content: center; /* Alinha horizontalmente */
-  gap: 8px;               /* Espaço entre imagem e texto */
-
-  user-select: none;          /* Padrão moderno */
-  -webkit-user-select: none;  /* Safari, Chrome */
-  -moz-user-select: none;     /* Firefox */
-  -ms-user-select: none;      /* IE/Edge antigos */
-
-  pointer-events: none;       /* Impede clique/pressão em qualquer elemento dentro */
-
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  user-select: none;
+  pointer-events: none;
 }
 
 #lives.hidden {
   display: none;
 }
 
-
-
 .hidden {
   display: none !important;
+}
+
+/* ===== BLOQUEIO DE SELEÇÃO E TOQUES ===== */
+* {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Botões - remove qualquer feedback visual indesejado */
+.btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.btn:focus {
+  outline: none;
+}
+
+/* HUD e elementos de vida - bloqueio total */
+#hud, #lives {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Garante que imagens dentro do HUD também não sejam selecionáveis */
+#hud img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-drag: none;
+  -o-user-drag: none;
+  user-drag: none;
+  user-select: none;
+}
+
+/* ===== MELHORIAS PARA DISPOSITIVOS MÓVEIS ===== */
+html {
+  touch-action: manipulation;
+}
+
+body {
+  overscroll-behavior: none;
+}
+
+.btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.9) !important;
+  transition: transform 0.05s, background 0.05s;
+}
+
+button {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
 }

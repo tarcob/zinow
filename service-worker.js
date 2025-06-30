@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jump-stones-v4'; // Atualize a versão do cache
+const CACHE_NAME = 'jump-stones-v5'; // Atualize a versão do cache
 const ASSETS = [
   '/',
   '/index.html?v=1.0.2', // Adicione parâmetro de versão
