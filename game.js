@@ -347,6 +347,22 @@ function createCoinSparkle(x, y) {
   }
 }
 
+function createConfettiExplosion(x, y) {
+  const colors = ['#ffeb3b', '#ff4081', '#4caf50', '#2196f3', '#f44336', '#00bcd4'];
+  for (let i = 0; i < 20; i++) {
+    confettiParticles.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 3,
+      vy: (Math.random() - 1.5) * 3,
+      size: Math.random() * 3 + 2,
+      alpha: 1,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 30 + Math.random() * 15
+    });
+  }
+}
+
 
 
 function buildLevelFromMap() {
@@ -508,6 +524,7 @@ function checkCheckpointCollision() {
       cp.active = false;
       lastCheckpoint = { x: cp.x, y: cp.y - player.height - 1 };
       soundCheckpoint.play();
+      createConfettiExplosion(cp.x + 20, cp.y); // ponto central da bandeira
     }
   });
 }
@@ -747,6 +764,21 @@ for (let i = 0; i < coinParticles.length; i++) {
   }
 }
 
+// Atualiza partículas do checkpoint
+for (let i = 0; i < confettiParticles.length; i++) {
+  const p = confettiParticles[i];
+  p.x += p.vx;
+  p.y += p.vy;
+  p.vy += 0.05; // gravidade
+  p.alpha -= 0.02;
+  p.life--;
+
+  if (p.life <= 0 || p.alpha <= 0) {
+    confettiParticles.splice(i, 1);
+    i--;
+  }
+}
+
 }
 
 
@@ -875,6 +907,13 @@ coinParticles.forEach(p => {
   ctx.fill();
 });
 
+// Desenha partículas do checkpoint
+confettiParticles.forEach(p => {
+  ctx.fillStyle = `rgba(${hexToRgb(p.color)}, ${p.alpha})`;
+  ctx.beginPath();
+  ctx.fillRect(p.x - cameraX, p.y - cameraY, p.size, p.size);
+});
+
   // Verifica colisão com água
   const isInWater = objects.tiles.some(tile => 
     tile.type === "water" && 
@@ -924,6 +963,9 @@ let waterParticles = [];
 // Sistema de partículas para Moedas
 let coinParticles = [];
 
+// Sistema de partículas para Cchekpoint
+let confettiParticles = [];
+
 
 function createWaterSplash(x, y) {
   for (let i = 0; i < 15; i++) {
@@ -959,6 +1001,14 @@ function drawWaterParticles() {
       i--;
     }
   }
+}
+
+function hexToRgb(hex) {
+  const bigint = parseInt(hex.replace("#", ""), 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `${r},${g},${b}`;
 }
 
 function loop() {
