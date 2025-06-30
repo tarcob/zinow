@@ -1,0 +1,172 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: sans-serif;
+  background: #87ceeb;
+}
+
+#container {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  overflow: hidden;
+}
+
+#background-layers {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(to bottom, 
+  #beebff 0%, 
+  #0aaadb 50%, 
+  #235d81 100%
+);
+}
+
+
+
+#game {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: calc(100% - 90px);
+  background: none;;
+}
+
+@keyframes moveMountains {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+
+#controls-area {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 90px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 20px;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 100;
+}
+
+
+.controls-container {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    touch-action: manipulation;
+    pointer-events: none; /* Isso desativa todos os toques no container */
+}
+
+/* Permite toques apenas nos botões */
+.controls-container button {
+    pointer-events: auto; /* Reativa os toques apenas nos botões */
+}
+
+
+.btn-group {
+  display: flex;
+  gap: 15px;
+}
+
+.btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 28px;
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s, background 0.2s;
+}
+
+.btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+#menu-btn {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.9);
+  color: #333;
+  font-weight: bold;
+}
+
+#jump {
+  background: #f44336;
+}
+
+#left, #right {
+  background: #4CAF50;
+}
+
+#hud {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  background: rgba(0,0,0,0.5);
+  color: white;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-size: 32px;
+  font-family: 'Bungee', cursive;
+    text-shadow:
+    -1px -1px 0 black,
+     1px -1px 0 black,
+    -1px  1px 0 black,
+     1px  1px 0 black;
+     -webkit-text-stroke: 1px black;
+  z-index: 1000;
+  
+  /* Adicione estas propriedades para alinhamento */
+  display: flex;
+  align-items: center;    /* Alinha verticalmente */
+  justify-content: center; /* Alinha horizontalmente */
+  gap: 8px;               /* Espaço entre imagem e texto */
+
+  user-select: none;          /* Padrão moderno */
+  -webkit-user-select: none;  /* Safari, Chrome */
+  -moz-user-select: none;     /* Firefox */
+  -ms-user-select: none;      /* IE/Edge antigos */
+
+  pointer-events: none;       /* Impede clique/pressão em qualquer elemento dentro */
+
+}
+
+#lives.hidden {
+  display: none;
+}
+
+
+
+.hidden {
+  display: none !important;
+}
+
+/* Estilo para o display de vidas */
+#lives {
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    pointer-events: none;
+}
