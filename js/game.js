@@ -332,6 +332,39 @@ const playerSprite = {
 let startPosition = null;
 let objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], finish: null };
 
+
+function createCoinSparkle(x, y) {
+  for (let i = 0; i < 12; i++) {
+    coinParticles.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 2,
+      vy: (Math.random() - 1.5) * 2,
+      size: Math.random() * 2 + 2,
+      alpha: 1,
+      life: 30 + Math.random() * 10
+    });
+  }
+}
+
+function createConfettiExplosion(x, y) {
+  const colors = ['#ffeb3b', '#ff4081', '#4caf50', '#2196f3', '#f44336', '#00bcd4'];
+  for (let i = 0; i < 20; i++) {
+    confettiParticles.push({
+      x,
+      y,
+      vx: (Math.random() - 0.5) * 3,
+      vy: (Math.random() - 1.5) * 3,
+      size: Math.random() * 3 + 2,
+      alpha: 1,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 30 + Math.random() * 15
+    });
+  }
+}
+
+
+
 function buildLevelFromMap() {
   tileMap.forEach((row, rowIndex) => {
     [...row].forEach((char, colIndex) => {
@@ -491,6 +524,7 @@ function checkCheckpointCollision() {
       cp.active = false;
       lastCheckpoint = { x: cp.x, y: cp.y - player.height - 1 };
       soundCheckpoint.play();
+      createConfettiExplosion(cp.x + 20, cp.y); // ponto central da bandeira
     }
   });
 }
@@ -667,6 +701,7 @@ if (coinSprite.delayCounter >= coinSprite.frameDelay) {
     if (!coin.collected && checkCollision(player, coin)) {
       coin.collected = true;
       soundCoin.play();
+      createCoinSparkle(coin.x + coin.width / 2, coin.y + coin.height / 2); // 👈 chama o efeito
       return false;
     }
     return true;
@@ -713,7 +748,40 @@ if (objects.finish && objects.finish.active) {
     playerSprite.counter = 0;
     playerSprite.frame = (playerSprite.frame + 1) % maxFrames[playerSprite.state];
   }
+
+  // Atualiza partículas das moedas
+for (let i = 0; i < coinParticles.length; i++) {
+  const p = coinParticles[i];
+  p.x += p.vx;
+  p.y += p.vy;
+  p.vy += 0.05; // gravidade leve
+  p.life--;
+  p.alpha -= 0.03;
+
+  if (p.life <= 0 || p.alpha <= 0) {
+    coinParticles.splice(i, 1);
+    i--;
+  }
 }
+
+// Atualiza partículas do checkpoint
+for (let i = 0; i < confettiParticles.length; i++) {
+  const p = confettiParticles[i];
+  p.x += p.vx;
+  p.y += p.vy;
+  p.vy += 0.05; // gravidade
+  p.alpha -= 0.02;
+  p.life--;
+
+  if (p.life <= 0 || p.alpha <= 0) {
+    confettiParticles.splice(i, 1);
+    i--;
+  }
+}
+
+}
+
+
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -831,6 +899,21 @@ function draw() {
   });
 }
 
+  // Desenha partículas das moedas
+coinParticles.forEach(p => {
+  ctx.fillStyle = `rgba(255, 215, 0, ${p.alpha})`; // dourado
+  ctx.beginPath();
+  ctx.arc(p.x - cameraX, p.y - cameraY, p.size, 0, Math.PI * 2);
+  ctx.fill();
+});
+
+// Desenha partículas do checkpoint
+confettiParticles.forEach(p => {
+  ctx.fillStyle = `rgba(${hexToRgb(p.color)}, ${p.alpha})`;
+  ctx.beginPath();
+  ctx.fillRect(p.x - cameraX, p.y - cameraY, p.size, p.size);
+});
+
   // Verifica colisão com água
   const isInWater = objects.tiles.some(tile => 
     tile.type === "water" && 
@@ -839,6 +922,8 @@ function draw() {
     player.y + player.height > tile.y && 
     player.y < tile.y + tile.height
   );
+
+
 
   // Efeito splash ao entrar na água
   if (isInWater && !player.wasInWater) {
@@ -875,6 +960,13 @@ function drawPlayer() {
 // Sistema de partículas para o splash
 let waterParticles = [];
 
+// Sistema de partículas para Moedas
+let coinParticles = [];
+
+// Sistema de partículas para Cchekpoint
+let confettiParticles = [];
+
+
 function createWaterSplash(x, y) {
   for (let i = 0; i < 15; i++) {
     waterParticles.push({
@@ -887,6 +979,8 @@ function createWaterSplash(x, y) {
     });
   }
 }
+
+
 
 function drawWaterParticles() {
   for (let i = 0; i < waterParticles.length; i++) {
@@ -907,6 +1001,14 @@ function drawWaterParticles() {
       i--;
     }
   }
+}
+
+function hexToRgb(hex) {
+  const bigint = parseInt(hex.replace("#", ""), 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `${r},${g},${b}`;
 }
 
 function loop() {
