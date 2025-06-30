@@ -61,19 +61,7 @@ html, body {
 }
 
 
-.controls-container {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    touch-action: manipulation;
-    pointer-events: none; /* Isso desativa todos os toques no container */
-}
 
-/* Permite toques apenas nos botões */
-.controls-container button {
-    pointer-events: auto; /* Reativa os toques apenas nos botões */
-}
 
 
 .btn-group {
@@ -162,11 +150,75 @@ html, body {
   display: none !important;
 }
 
-/* Estilo para o display de vidas */
-#lives {
-    user-select: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    pointer-events: none;
+/* ===== BLOQUEIO DE SELEÇÃO E TOQUES ===== */
+/* Regra geral para toda a interface */
+* {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* IE/Edge */
+  user-select: none; /* Padrão moderno */
+  -webkit-tap-highlight-color: transparent; /* Remove highlight azul no mobile */
+}
+
+/* Área de controles - bloqueia toques */
+#controls-area {
+  pointer-events: none; /* Bloqueia todos os toques */
+}
+
+/* Reativa toques apenas nos botões */
+#controls-area button {
+  pointer-events: auto;
+}
+
+/* Botões - remove qualquer feedback visual indesejado */
+.btn {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation; /* Otimiza resposta ao toque */
+}
+
+/* Remove outline em foco para acessibilidade controlada */
+.btn:focus {
+  outline: none;
+}
+
+/* HUD e elementos de vida - bloqueio total */
+#hud, #lives {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Garante que imagens dentro do HUD também não sejam selecionáveis */
+#hud img {
+  pointer-events: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
+/* ===== MELHORIAS PARA DISPOSITIVOS MÓVEIS ===== */
+/* Previne zoom com toque duplo */
+html {
+  touch-action: manipulation;
+}
+
+/* Previne scroll acidental durante o jogo */
+body {
+  overscroll-behavior: none;
+}
+
+/* ===== ESTADOS DOS BOTÕES ===== */
+/* Feedback visual melhorado para toque */
+.btn:active {
+  transform: scale(0.95);
+  background: rgba(255, 255, 255, 0.9) !important;
+  transition: transform 0.05s, background 0.05s;
+}
+
+/* Remove qualquer borda/outline padrão do navegador */
+button {
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
 }
