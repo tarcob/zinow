@@ -31,12 +31,14 @@ const soundCheckpoint = document.getElementById('sound-checkpoint');
 const soundFinish = document.getElementById('sound-finish');
 const soundJump = document.getElementById('sound-jump');
 const soundCoin = document.getElementById('sound-coin');
+const soundGameOver = document.getElementById('sound-gameover');
 
 let animationFrameId;
 let firstLoad = true;
 let isGamePaused = false;
 let isFullscreen = false;
 let isMusicPlaying = false;
+let isDying = false; // Variável global para controlar o estado de morte
 
 // Controle das telas
 function showScreen(screenId) {
@@ -562,21 +564,66 @@ function pauseGameForSeconds(seconds) {
   });
 }
 
-let isDying = false; // Variável global para controlar o estado de morte
+
 
 async function handleDeath() {
-    if (isDying) return; // Se já está morrendo, não faz nada
+    if (isDying) return;
     isDying = true;
     
     lives--;
     livesDisplay.textContent = lives;
 
-    
     if (lives < 1) {
         livesDisplay.classList.add('hidden');
-        await pauseGameForSeconds(1); // Espera um pouco antes de pausar
-        isGamePaused = true;          // Pausa o jogo ANTES de mostrar Game Over
+        await pauseGameForSeconds(1);
+        isGamePaused = true;
+        
+        // Tocar música de game over
+        soundGameOver.play();
+        
+        // Mostrar tela de game over
         showScreen('gameover-screen');
+        
+        // Depois de 9 segundos, voltar completamente para o início
+        setTimeout(() => {
+            // 1. Parar completamente o jogo
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            backgroundMusic.pause();
+            backgroundMusic.currentTime = 0;
+            
+            // 2. Resetar TODOS os estados do jogo
+            lives = 3;
+            isDying = false;
+            isGamePaused = false;
+            lastCheckpoint = null;
+            collectedLifeKeys.clear();
+            cameraX = 0;
+            cameraY = 0;
+            
+            // 3. Reconstruir todos os objetos do jogo (incluindo checkpoints)
+            objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], coins: [], finish: null };
+            buildLevelFromMap(); // Isso vai recriar todos os checkpoints
+            
+            // 4. Resetar o jogador
+            const spawn = startPosition || { x: 100, y: 550 };
+            Object.assign(player, spawn, { 
+                dx: 0, 
+                dy: 0,
+                jumping: false,
+                canDoubleJump: false,
+                jumpPressed: false
+            });
+            
+            // 5. Mostrar a tela inicial como novo jogo
+            showScreen('start-screen');
+            
+            // 6. Resetar a exibição de vidas
+            livesDisplay.textContent = lives;
+            livesDisplay.classList.remove('hidden');
+        }, 9000);
+        
         isDying = false;
         return;
     }
@@ -1089,11 +1136,7 @@ document.getElementById("jump").ontouchend = () => keys.jump = false;
 
 // Event listeners para os botões das telas
 document.getElementById('start-btn').addEventListener('click', startGame);
-document.getElementById('restart-btn').addEventListener('click', function() {
-  isGamePaused = false; // Remove a pausa antes de recarregar
-  // Forçar um reload completo do jogo
-  location.reload();
-});
+
 document.getElementById('resume-btn').addEventListener('click', togglePause);
 document.getElementById('menu-btn').addEventListener('click', togglePause);
 document.getElementById('save-btn').addEventListener('click', () => {

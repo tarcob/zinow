@@ -16,18 +16,18 @@
   <!-- Tela de Início -->
   <div id="start-screen" class="screen">
     <div class="screen-content">
-      <h1>Jump Stones</h1>
+      <h1>Zinow's World</h1>
       <button id="start-btn" class="menu-btn">Novo Jogo</button>
     </div>
   </div>
 
-  <!-- Tela de Game Over -->
-  <div id="gameover-screen" class="screen hidden">
-    <div class="screen-content">
-      <h1>Game Over</h1>
-      <button id="restart-btn" class="menu-btn">Tentar Novamente</button>
-    </div>
+<!-- Tela de Game Over -->
+<div id="gameover-screen" class="screen hidden">
+  <div class="screen-content">
+    <h1>Game Over</h1>
+    <img src="img/dead.png" id="dead-image" alt="Personagem morto">
   </div>
+</div>>
 
   <!-- Tela de Pausa -->
   <div id="pause-screen" class="screen hidden">
@@ -88,6 +88,10 @@
     <source src="sound/jump.mp3" type="audio/mpeg">
   </audio>
   <audio id="sound-coin" src="sound/coin.mp3" preload="auto"></audio>
+
+  <audio id="sound-gameover">
+  <source src="sound/gameover.mp3" type="audio/mpeg">
+</audio>
 
   <script src="js/game.js?v=1.0.2"></script>
   <script>
