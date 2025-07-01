@@ -313,7 +313,7 @@ button {
 
 /* === TELA DE INÍCIO DESKTOP === */
 #start-screen.custom-start {
-  background: url('/img/zinoworld.jpeg') no-repeat center center;
+  background: url('../img/zinoworld.jpg') no-repeat center center;
   background-size: cover;
 }
 
@@ -337,7 +337,7 @@ button {
 /* === TELA DE INÍCIO MOBILE COM IMAGEM DIFERENTE === */
 @media (max-width: 768px) {
   #start-screen.custom-start {
-    background: url('/img/zinoworld_mobile.jpg') no-repeat center center;
+    background: url('../img/zinoworld_mobile.jpg') no-repeat center center;
     background-size: auto 100%; /* Preenche verticalmente, corta lados */
   }
 }
