@@ -216,3 +216,143 @@ button {
   padding: 0;
   margin: 0;
 }
+
+/* Telas de menu */
+.screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  color: white;
+  font-family: 'Bungee', cursive;
+  text-align: center;
+}
+
+.screen-content {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 30px;
+  border-radius: 15px;
+  max-width: 90%;
+  border: 3px solid #4CAF50;
+}
+
+.screen h1 {
+  margin-bottom: 30px;
+  font-size: 2.5rem;
+  color: #4CAF50;
+  text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.menu-btn {
+  display: block;
+  width: 200px;
+  padding: 15px;
+  margin: 15px auto;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-family: 'Bungee', cursive;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.menu-btn:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.menu-btn:active {
+  transform: scale(0.95);
+}
+
+#game-container {
+  width: 100%;
+  height: 100%;
+}
+
+/* Tela de Game Over modificada */
+#gameover-screen {
+  background: #000; /* Fundo totalmente preto */
+}
+
+#gameover-screen .screen-content {
+  background: transparent; /* Remove o fundo do conteúdo */
+  border: none; /* Remove a borda */
+  padding: 0; /* Remove o padding */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+#gameover-screen h1 {
+  color: white; /* Texto em branco */
+  margin-bottom: 20px;
+  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+}
+
+/* Adicione isso ao seu arquivo CSS */
+#dead-image {
+  max-width: 80%; /* Ajusta o tamanho da imagem */
+  height: auto;
+  animation: fadeIn 1s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.8); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+/* === TELA DE INÍCIO DESKTOP === */
+#start-screen.custom-start {
+  background: url('/img/zinoworld.jpeg') no-repeat center center;
+  background-size: cover;
+}
+
+/* Remove fundo da caixa e bordas */
+.screen-content.no-bg {
+  background: transparent;
+  border: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Botão centralizado */
+#start-screen .menu-btn {
+  position: relative;
+  z-index: 2;
+}
+
+/* === TELA DE INÍCIO MOBILE COM IMAGEM DIFERENTE === */
+@media (max-width: 768px) {
+  #start-screen.custom-start {
+    background: url('/img/zinoworld_mobile.jpg') no-repeat center center;
+    background-size: auto 100%; /* Preenche verticalmente, corta lados */
+  }
+}
+/* Botão "Novo Jogo" em vermelho */
+#start-screen .menu-btn {
+  background: #e53935; /* vermelho forte */
+  color: white;
+}
+
+#start-screen .menu-btn:hover {
+  background: #d32f2f;
+  transform: scale(1.05);
+}
+
+#start-screen .menu-btn:active {
+  background: #c62828;
+  transform: scale(0.95);
+}
