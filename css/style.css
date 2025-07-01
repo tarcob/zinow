@@ -313,7 +313,7 @@ button {
 
 /* === TELA DE INÍCIO DESKTOP === */
 #start-screen.custom-start {
-  background: url('../img/zinoworld.jpeg') no-repeat center center;
+  background: url('../img/zinoworld.jpg') no-repeat center center;
   background-size: cover;
 }
 
