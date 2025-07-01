@@ -13,28 +13,51 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
-  <div id="container">
-     <div id="background-layers">
-    <div id="mountains"></div>
-  </div>
-    <canvas id="game"></canvas>
-<div id="controls-area">
-  <div class="btn-group" id="jump-group">
-    <div class="btn" id="jump">▲</div>
+  <!-- Tela de Início -->
+  <div id="start-screen" class="screen">
+    <div class="screen-content">
+      <h1>Jump Stones</h1>
+      <button id="start-btn" class="menu-btn">Novo Jogo</button>
+    </div>
   </div>
 
-  <div class="btn" id="menu-btn">☰</div>
-
-  <div class="btn-group" id="move-group">
-    <div class="btn" id="left">◀</div>
-    <div class="btn" id="right">▶</div>
+  <!-- Tela de Game Over -->
+  <div id="gameover-screen" class="screen hidden">
+    <div class="screen-content">
+      <h1>Game Over</h1>
+      <button id="restart-btn" class="menu-btn">Tentar Novamente</button>
+    </div>
   </div>
-</div>
+
+  <!-- Tela de Pausa -->
+  <div id="pause-screen" class="screen hidden">
+    <div class="screen-content">
+      <h1>Jogo Pausado</h1>
+      <button id="save-btn" class="menu-btn">Salvar Jogo</button>
+      <button id="resume-btn" class="menu-btn">Continuar</button>
+    </div>
   </div>
 
-  <div id="hud"><img src="img/vidascount.png"/><span id="lives">3</span></div>
-
-
+  <!-- Jogo em si -->
+  <div id="game-container" class="hidden">
+    <div id="container">
+      <div id="background-layers">
+        <div id="mountains"></div>
+      </div>
+      <canvas id="game"></canvas>
+      <div id="controls-area">
+        <div class="btn-group" id="jump-group">
+          <div class="btn" id="jump">▲</div>
+        </div>
+        <div class="btn" id="menu-btn">☰</div>
+        <div class="btn-group" id="move-group">
+          <div class="btn" id="left">◀</div>
+          <div class="btn" id="right">▶</div>
+        </div>
+      </div>
+    </div>
+    <div id="hud"><img src="img/vidascount.png"/><span id="lives">3</span></div>
+  </div>
 
   <!-- Elementos de áudio -->
   <audio id="background-music" loop>
@@ -64,10 +87,9 @@
   <audio id="sound-jump">
     <source src="sound/jump.mp3" type="audio/mpeg">
   </audio>
-
   <audio id="sound-coin" src="sound/coin.mp3" preload="auto"></audio>
 
- <script src="js/game.js?v=1.0.2"></script>
+  <script src="js/game.js?v=1.0.2"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {

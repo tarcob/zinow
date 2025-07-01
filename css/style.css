@@ -216,3 +216,64 @@ button {
   padding: 0;
   margin: 0;
 }
+
+/* Telas de menu */
+.screen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  color: white;
+  font-family: 'Bungee', cursive;
+  text-align: center;
+}
+
+.screen-content {
+  background: rgba(0, 0, 0, 0.7);
+  padding: 30px;
+  border-radius: 15px;
+  max-width: 90%;
+  border: 3px solid #4CAF50;
+}
+
+.screen h1 {
+  margin-bottom: 30px;
+  font-size: 2.5rem;
+  color: #4CAF50;
+  text-shadow: 0 0 10px rgba(76, 175, 80, 0.5);
+}
+
+.menu-btn {
+  display: block;
+  width: 200px;
+  padding: 15px;
+  margin: 15px auto;
+  background: #4CAF50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-family: 'Bungee', cursive;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.menu-btn:hover {
+  background: #45a049;
+  transform: scale(1.05);
+}
+
+.menu-btn:active {
+  transform: scale(0.95);
+}
+
+#game-container {
+  width: 100%;
+  height: 100%;
+}

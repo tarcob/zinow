@@ -20,11 +20,6 @@ const ctx = canvas.getContext("2d");
 const livesDisplay = document.getElementById("lives");
 const controlsHeight = 90;
 
-
-
-
-
-
 // Elementos de áudio
 const backgroundMusic = document.getElementById('background-music');
 const soundLife = document.getElementById('sound-life');
@@ -42,7 +37,64 @@ let firstLoad = true;
 let isGamePaused = false;
 let isFullscreen = false;
 let isMusicPlaying = false;
-let menuOpen = false;
+
+// Controle das telas
+function showScreen(screenId) {
+  document.querySelectorAll('.screen').forEach(screen => {
+    screen.classList.add('hidden');
+  });
+  document.getElementById(screenId).classList.remove('hidden');
+  
+  if (screenId === 'game-container') {
+    document.getElementById('game-container').classList.remove('hidden');
+    if (!isGamePaused) {
+      backgroundMusic.play().catch(e => console.log("Erro ao iniciar música:", e));
+    }
+  } else {
+    document.getElementById('game-container').classList.add('hidden');
+    backgroundMusic.pause();
+  }
+}
+
+function startGame() {
+  showScreen('game-container');
+  lives = 3;
+  livesDisplay.textContent = lives;
+  livesDisplay.classList.remove('hidden');
+  isGamePaused = false;
+  
+  // Resetar checkpoint quando reinicia o jogo
+  lastCheckpoint = null;
+  
+  // Reinicia o jogador
+  const spawn = startPosition || { x: 100, y: 550 };
+  Object.assign(player, spawn, { 
+    dx: 0, 
+    dy: 0,
+    jumping: false,
+    canDoubleJump: false,
+    jumpPressed: false
+  });
+  
+  // Reinicia o jogo
+  if (animationFrameId) {
+    cancelAnimationFrame(animationFrameId);
+  }
+  animationFrameId = requestAnimationFrame(loop);
+}
+  
+
+
+function togglePause() {
+  isGamePaused = !isGamePaused;
+  if (isGamePaused) {
+    showScreen('pause-screen');
+    backgroundMusic.pause();
+  } else {
+    showScreen('game-container');
+    backgroundMusic.play().catch(e => console.log("Erro ao reiniciar música:", e));
+  }
+}
 
 // Configurações de tela cheia
 function toggleFullscreen() {
@@ -68,11 +120,6 @@ document.addEventListener('fullscreenchange', () => {
   fullscreenBtn.textContent = isFullscreen ? "Sair da Tela Cheia" : "Tela Cheia";
 });
 
-// Controle do menu
-
-
-
-
 // Controle de música
 function toggleMusic() {
   if (isMusicPlaying) {
@@ -90,8 +137,6 @@ function toggleMusic() {
   isMusicPlaying = !isMusicPlaying;
 }
 
-
-
 // Inicialização do áudio
 function initAudio() {
   backgroundMusic.volume = 0.5;
@@ -100,7 +145,6 @@ function initAudio() {
     if (!isMusicPlaying) {
       backgroundMusic.play().then(() => {
         isMusicPlaying = true;
-        //musicToggleBtn.textContent = "🔊 Desligar Música";
       }).catch(e => console.log("Erro ao iniciar música:", e));
     }
   }, { once: true });
@@ -111,9 +155,6 @@ function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight - controlsHeight;
 }
-
-// Restante do código do jogo (tileMap, tileTypes, player, etc...)
-// [Mantido igual ao seu código original, apenas certificando-se que todas as referências a sons usam os elementos DOM]
 
 const collectedLifeKeys = new Set();
 
@@ -139,8 +180,6 @@ const images = {
   groundBottom: new Image(),
   coin: new Image(),
 };
-
-
 
 // Caminhos corrigidos para imagens
 images.ground.src = "img/ground.png?v=1";
@@ -177,7 +216,6 @@ const coinSprite = {
   delayCounter: 0
 };
 coinSprite.image.src = "img/coin.png?v=1";
-
 
 const checkpointSprite = {
   image: new Image(),
@@ -318,7 +356,9 @@ const player = {
   jumping: false,
   canDoubleJump: false,
   jumpPressed: false,
-  color: "#4caf50"
+  color: "#4caf50",
+  wasInWater: false
+  
 };
 
 const playerSprite = {
@@ -330,8 +370,12 @@ const playerSprite = {
 };
 
 let startPosition = null;
-let objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], finish: null };
+let objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], coins: [], finish: null };
 
+// Sistema de partículas
+let waterParticles = [];
+let coinParticles = [];
+let confettiParticles = [];
 
 function createCoinSparkle(x, y) {
   for (let i = 0; i < 12; i++) {
@@ -363,7 +407,47 @@ function createConfettiExplosion(x, y) {
   }
 }
 
+function createWaterSplash(x, y) {
+  for (let i = 0; i < 15; i++) {
+    waterParticles.push({
+      x: x,
+      y: y,
+      vx: (Math.random() - 0.5) * 5,
+      vy: -Math.random() * 5,
+      size: Math.random() * 3 + 2,
+      life: 30 + Math.random() * 20
+    });
+  }
+}
 
+function drawWaterParticles() {
+  for (let i = 0; i < waterParticles.length; i++) {
+    const p = waterParticles[i];
+    
+    ctx.fillStyle = 'rgba(100, 200, 255, 0.7)';
+    ctx.beginPath();
+    ctx.arc(p.x - cameraX, p.y - cameraY, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1; // gravidade
+    p.life--;
+    
+    if (p.life <= 0) {
+      waterParticles.splice(i, 1);
+      i--;
+    }
+  }
+}
+
+function hexToRgb(hex) {
+  const bigint = parseInt(hex.replace("#", ""), 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+  return `${r},${g},${b}`;
+}
 
 function buildLevelFromMap() {
   tileMap.forEach((row, rowIndex) => {
@@ -375,23 +459,18 @@ function buildLevelFromMap() {
       const y = baseY + (40 - def.height);
       const props = { x, y, width: def.width, height: def.height };
 
-      if (
-  def.type === 'ground' ||
-  def.type === 'water' ||
-  def.type === 'ground-grass' ||
-  def.type === 'ground-grass-right'||
-  def.type === 'ground-grass-left'
-) {
-  objects.tiles.push({ ...props, type: def.type, color: def.color });
-}else if (def.type === 'decor01') {
-  objects.tiles.push({ ...props, type: 'decor01' });
-} else if (def.type === 'decoGrass') {
-  objects.tiles.push({ ...props, type: 'decoGrass' });
-} else if (def.type === 'ground-fake') {
-  objects.tiles.push({ ...props, type: 'ground-fake' });
-} else if (def.type === 'ground-bottom') {
-  objects.tiles.push({ ...props, type: 'ground-bottom' });
-} else if (def.type === 'platform') {
+      if (def.type === 'ground' || def.type === 'water' || def.type === 'ground-grass' || 
+          def.type === 'ground-grass-right' || def.type === 'ground-grass-left') {
+        objects.tiles.push({ ...props, type: def.type, color: def.color });
+      } else if (def.type === 'decor01') {
+        objects.tiles.push({ ...props, type: 'decor01' });
+      } else if (def.type === 'decoGrass') {
+        objects.tiles.push({ ...props, type: 'decoGrass' });
+      } else if (def.type === 'ground-fake') {
+        objects.tiles.push({ ...props, type: 'ground-fake' });
+      } else if (def.type === 'ground-bottom') {
+        objects.tiles.push({ ...props, type: 'ground-bottom' });
+      } else if (def.type === 'platform') {
         objects.platforms.push(props);
       } else if (def.type === 'checkpoint') {
         objects.checkpoints.push({ x, y: y + 40, active: true });
@@ -418,14 +497,14 @@ function buildLevelFromMap() {
           counter: 0
         });
       } else if (def.type === 'coin') {
-  if (!objects.coins) objects.coins = [];
-  const key = `${x},${y}`;
-  objects.coins.push({ ...props, type: 'coin', key, collected: false });
+        if (!objects.coins) objects.coins = [];
+        const key = `${x},${y}`;
+        objects.coins.push({ ...props, type: 'coin', key, collected: false });
       } else if (def.type === 'life') {
         if (!objects.lives) objects.lives = [];
         const key = `${x},${y}`;
         objects.lives.push({ ...props, type: 'life', color: def.color, key, collected: collectedLifeKeys.has(key) });
-  }
+      }
 
       levelMinY = Math.min(levelMinY, y);
       levelMaxY = Math.max(levelMaxY, y + def.height);
@@ -473,7 +552,6 @@ function resolveCollision(r) {
   }
 }
 
-
 function pauseGameForSeconds(seconds) {
   isGamePaused = true;
   return new Promise(resolve => {
@@ -484,26 +562,45 @@ function pauseGameForSeconds(seconds) {
   });
 }
 
+let isDying = false; // Variável global para controlar o estado de morte
 
 async function handleDeath() {
+    if (isDying) return; // Se já está morrendo, não faz nada
+    isDying = true;
+    
     lives--;
     livesDisplay.textContent = lives;
+
+    
+    if (lives < 1) {
+        livesDisplay.classList.add('hidden');
+        await pauseGameForSeconds(1); // Espera um pouco antes de pausar
+        isGamePaused = true;          // Pausa o jogo ANTES de mostrar Game Over
+        showScreen('gameover-screen');
+        isDying = false;
+        return;
+    }
+
+    // Tocar som apenas uma vez
+    if (lives >= 0) {
+        soundSpike.play();
+    }
 
     if (lives < 1) {
         livesDisplay.classList.add('hidden');
         await pauseGameForSeconds(1);
-        triggerGameOver();
+        isDying = false; // Resetar antes de mostrar game over
+        showScreen('gameover-screen');
         return;
     } else {
         livesDisplay.classList.remove('hidden');
     }
 
-    // Reativa o finish quando o jogador morre
     if (objects.finish) {
         objects.finish.active = true;
     }
 
-    await pauseGameForSeconds(1); // Aguarda 2 segundos antes de respawn
+    await pauseGameForSeconds(1);
 
     const spawn = lastCheckpoint || startPosition;
     Object.assign(player, spawn, { 
@@ -513,6 +610,8 @@ async function handleDeath() {
         canDoubleJump: false,
         jumpPressed: false
     });
+    
+    isDying = false; // Resetar após o respawn
 }
 
 function checkCheckpointCollision() {
@@ -524,13 +623,9 @@ function checkCheckpointCollision() {
       cp.active = false;
       lastCheckpoint = { x: cp.x, y: cp.y - player.height - 1 };
       soundCheckpoint.play();
-      createConfettiExplosion(cp.x + 20, cp.y); // ponto central da bandeira
+      createConfettiExplosion(cp.x + 20, cp.y);
     }
   });
-}
-
-function triggerGameOver() {
-  window.location.href = "gameover.html";
 }
 
 function update() {
@@ -562,25 +657,24 @@ function update() {
   player.y += player.dy;
 
   objects.platforms.forEach(resolveCollision);
-objects.tiles
-  .filter(t => t.type === "ground" || t.type === "ground-grass" || t.type === "ground-grass-right"||
-    t.type === "ground-grass-left")
-  .forEach(tile => {
-    if (tile.type === "ground-grass" || tile.type === "ground-grass-right"||
-      tile.type === "ground-grass-left") {
-      const adjustedTile = {
-        x: tile.x,
-        y: tile.y + 5,
-        width: tile.width,
-        height: tile.height - 5
-      };
-      resolveCollision(adjustedTile);
-    } else {
-      resolveCollision(tile);
-    }
-  });
+  objects.tiles
+    .filter(t => t.type === "ground" || t.type === "ground-grass" || 
+             t.type === "ground-grass-right" || t.type === "ground-grass-left")
+    .forEach(tile => {
+      if (tile.type === "ground-grass" || tile.type === "ground-grass-right" ||
+          tile.type === "ground-grass-left") {
+        const adjustedTile = {
+          x: tile.x,
+          y: tile.y + 5,
+          width: tile.width,
+          height: tile.height - 5
+        };
+        resolveCollision(adjustedTile);
+      } else {
+        resolveCollision(tile);
+      }
+    });
 
-  
   if (objects.spikes.some(s => {
     const reducedSpike = {
       x: s.x + 6,
@@ -590,12 +684,12 @@ objects.tiles
     };
     return checkCollision(player, reducedSpike);
   })) {
-    soundSpike.play();
+     if (!isDying) soundSpike.play();
     handleDeath();
   }
   
   if (objects.tiles.some(t => t.type === "water" && checkCollision(player, t))) {
-    soundWater.play();
+    if (!isDying) soundWater.play();
     handleDeath();
   }
   
@@ -633,10 +727,10 @@ objects.tiles
     }
 
     coinSprite.delayCounter++;
-if (coinSprite.delayCounter >= coinSprite.frameDelay) {
-  coinSprite.delayCounter = 0;
-  coinSprite.currentFrame = (coinSprite.currentFrame + 1) % coinSprite.frameCount;
-  }
+    if (coinSprite.delayCounter >= coinSprite.frameDelay) {
+      coinSprite.delayCounter = 0;
+      coinSprite.currentFrame = (coinSprite.currentFrame + 1) % coinSprite.frameCount;
+    }
 
     e.x += e.dx * e.dir;
     e.counter++;
@@ -671,10 +765,11 @@ if (coinSprite.delayCounter >= coinSprite.frameDelay) {
       return true;
     }
 
-    if (checkCollision(player, e)) {
-      soundEnemy.play();
-      handleDeath();
-    }
+  // Na colisão com inimigos:
+if (checkCollision(player, e)) {
+    if (!isDying) soundEnemy.play();
+    handleDeath();
+}
 
     return true;
   });
@@ -697,33 +792,33 @@ if (coinSprite.delayCounter >= coinSprite.frameDelay) {
   }
 
   if (objects.coins) {
-  objects.coins = objects.coins.filter(coin => {
-    if (!coin.collected && checkCollision(player, coin)) {
-      coin.collected = true;
-      soundCoin.play();
-      createCoinSparkle(coin.x + coin.width / 2, coin.y + coin.height / 2); // 👈 chama o efeito
-      return false;
-    }
-    return true;
-  });
-}
+    objects.coins = objects.coins.filter(coin => {
+      if (!coin.collected && checkCollision(player, coin)) {
+        coin.collected = true;
+        soundCoin.play();
+        createCoinSparkle(coin.x + coin.width / 2, coin.y + coin.height / 2);
+        return false;
+      }
+      return true;
+    });
+  }
 
-if (objects.finish && objects.finish.active) {
+  if (objects.finish && objects.finish.active) {
     const finishBox = {
-        x: objects.finish.x,
-        y: objects.finish.y - 40,
-        width: 40,
-        height: 120
+      x: objects.finish.x,
+      y: objects.finish.y - 40,
+      width: 40,
+      height: 120
     };
     if (checkCollision(player, finishBox)) {
-        objects.finish.active = false; // Desativa para não tocar o som novamente
-        soundFinish.play();
-        isGamePaused = true; // Pausa o jogo imediatamente
-        setTimeout(() => {
-            window.location.href = "index2.html";
-        }, 2000); // Aguarda 2 segundos antes de mudar de fase
+      objects.finish.active = false;
+      soundFinish.play();
+      isGamePaused = true;
+      setTimeout(() => {
+        window.location.href = "index2.html";
+      }, 2000);
     }
-}
+  }
 
   player.x = Math.max(0, Math.min(player.x, levelWidth - player.width));
   targetCameraX = Math.max(0, Math.min(player.x - canvas.width / 2, levelWidth - canvas.width));
@@ -750,43 +845,40 @@ if (objects.finish && objects.finish.active) {
   }
 
   // Atualiza partículas das moedas
-for (let i = 0; i < coinParticles.length; i++) {
-  const p = coinParticles[i];
-  p.x += p.vx;
-  p.y += p.vy;
-  p.vy += 0.05; // gravidade leve
-  p.life--;
-  p.alpha -= 0.03;
+  for (let i = 0; i < coinParticles.length; i++) {
+    const p = coinParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.05;
+    p.life--;
+    p.alpha -= 0.03;
 
-  if (p.life <= 0 || p.alpha <= 0) {
-    coinParticles.splice(i, 1);
-    i--;
+    if (p.life <= 0 || p.alpha <= 0) {
+      coinParticles.splice(i, 1);
+      i--;
+    }
+  }
+
+  // Atualiza partículas do checkpoint
+  for (let i = 0; i < confettiParticles.length; i++) {
+    const p = confettiParticles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.05;
+    p.alpha -= 0.02;
+    p.life--;
+
+    if (p.life <= 0 || p.alpha <= 0) {
+      confettiParticles.splice(i, 1);
+      i--;
+    }
   }
 }
-
-// Atualiza partículas do checkpoint
-for (let i = 0; i < confettiParticles.length; i++) {
-  const p = confettiParticles[i];
-  p.x += p.vx;
-  p.y += p.vy;
-  p.vy += 0.05; // gravidade
-  p.alpha -= 0.02;
-  p.life--;
-
-  if (p.life <= 0 || p.alpha <= 0) {
-    confettiParticles.splice(i, 1);
-    i--;
-  }
-}
-
-}
-
-
 
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
-  // Paralaxe de montanhas (move mais devagar que o jogador)
+  // Paralaxe de montanhas
   const parallaxX = -cameraX * 0.3;
   ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450);
 
@@ -888,31 +980,31 @@ function draw() {
   }
 
   if (objects.coins) {
-  objects.coins.forEach(coin => {
-    const sx = coinSprite.currentFrame * coinSprite.frameWidth;
-    ctx.drawImage(
-      coinSprite.image,
-      sx, 0, coinSprite.frameWidth, coinSprite.frameHeight,
-      coin.x - cameraX, coin.y - cameraY,
-      coin.width, coin.height
-    );
-  });
-}
+    objects.coins.forEach(coin => {
+      const sx = coinSprite.currentFrame * coinSprite.frameWidth;
+      ctx.drawImage(
+        coinSprite.image,
+        sx, 0, coinSprite.frameWidth, coinSprite.frameHeight,
+        coin.x - cameraX, coin.y - cameraY,
+        coin.width, coin.height
+      );
+    });
+  }
 
   // Desenha partículas das moedas
-coinParticles.forEach(p => {
-  ctx.fillStyle = `rgba(255, 215, 0, ${p.alpha})`; // dourado
-  ctx.beginPath();
-  ctx.arc(p.x - cameraX, p.y - cameraY, p.size, 0, Math.PI * 2);
-  ctx.fill();
-});
+  coinParticles.forEach(p => {
+    ctx.fillStyle = `rgba(255, 215, 0, ${p.alpha})`;
+    ctx.beginPath();
+    ctx.arc(p.x - cameraX, p.y - cameraY, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  });
 
-// Desenha partículas do checkpoint
-confettiParticles.forEach(p => {
-  ctx.fillStyle = `rgba(${hexToRgb(p.color)}, ${p.alpha})`;
-  ctx.beginPath();
-  ctx.fillRect(p.x - cameraX, p.y - cameraY, p.size, p.size);
-});
+  // Desenha partículas do checkpoint
+  confettiParticles.forEach(p => {
+    ctx.fillStyle = `rgba(${hexToRgb(p.color)}, ${p.alpha})`;
+    ctx.beginPath();
+    ctx.fillRect(p.x - cameraX, p.y - cameraY, p.size, p.size);
+  });
 
   // Verifica colisão com água
   const isInWater = objects.tiles.some(tile => 
@@ -923,8 +1015,6 @@ confettiParticles.forEach(p => {
     player.y < tile.y + tile.height
   );
 
-
-
   // Efeito splash ao entrar na água
   if (isInWater && !player.wasInWater) {
     createWaterSplash(player.x + player.width/2, player.y + player.height);
@@ -934,13 +1024,11 @@ confettiParticles.forEach(p => {
   // Desenha partículas da água
   drawWaterParticles();
 
-  // DESENHA O PLAYER APENAS SE NÃO ESTIVER NA ÁGUA
+  // Desenha o player apenas se não estiver na água
   if (!isInWater) {
     drawPlayer();
   }
 }
-
-
 
 function drawPlayer() {
   const spriteSet = playerSprite.state;
@@ -955,60 +1043,6 @@ function drawPlayer() {
     ctx.fillStyle = '#4caf50';
     ctx.fillRect(player.x - cameraX, player.y - cameraY, player.width, player.height);
   }
-}
-
-// Sistema de partículas para o splash
-let waterParticles = [];
-
-// Sistema de partículas para Moedas
-let coinParticles = [];
-
-// Sistema de partículas para Cchekpoint
-let confettiParticles = [];
-
-
-function createWaterSplash(x, y) {
-  for (let i = 0; i < 15; i++) {
-    waterParticles.push({
-      x: x,
-      y: y,
-      vx: (Math.random() - 0.5) * 5,
-      vy: -Math.random() * 5,
-      size: Math.random() * 3 + 2,
-      life: 30 + Math.random() * 20
-    });
-  }
-}
-
-
-
-function drawWaterParticles() {
-  for (let i = 0; i < waterParticles.length; i++) {
-    const p = waterParticles[i];
-    
-    ctx.fillStyle = 'rgba(100, 200, 255, 0.7)';
-    ctx.beginPath();
-    ctx.arc(p.x - cameraX, p.y - cameraY, p.size, 0, Math.PI * 2);
-    ctx.fill();
-    
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vy += 0.1; // gravidade
-    p.life--;
-    
-    if (p.life <= 0) {
-      waterParticles.splice(i, 1);
-      i--;
-    }
-  }
-}
-
-function hexToRgb(hex) {
-  const bigint = parseInt(hex.replace("#", ""), 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-  return `${r},${g},${b}`;
 }
 
 function loop() {
@@ -1030,14 +1064,14 @@ function initGame() {
     if (sound) sound.volume = 0.7;
   });
 
-  animationFrameId = requestAnimationFrame(loop);
+  // Mostra a tela de início
+  showScreen('start-screen');
 }
 
 document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft") keys.left = true;
   if (e.key === "ArrowRight") keys.right = true;
   if (e.key === " " || e.key === "ArrowUp") keys.jump = true;
-
 });
 
 document.addEventListener("keyup", e => {
@@ -1052,6 +1086,19 @@ document.getElementById("right").ontouchstart = () => keys.right = true;
 document.getElementById("right").ontouchend = () => keys.right = false;
 document.getElementById("jump").ontouchstart = () => keys.jump = true;
 document.getElementById("jump").ontouchend = () => keys.jump = false;
+
+// Event listeners para os botões das telas
+document.getElementById('start-btn').addEventListener('click', startGame);
+document.getElementById('restart-btn').addEventListener('click', function() {
+  isGamePaused = false; // Remove a pausa antes de recarregar
+  // Forçar um reload completo do jogo
+  location.reload();
+});
+document.getElementById('resume-btn').addEventListener('click', togglePause);
+document.getElementById('menu-btn').addEventListener('click', togglePause);
+document.getElementById('save-btn').addEventListener('click', () => {
+  alert('Jogo salvo! (funcionalidade não implementada)');
+});
 
 backgroundMusic.addEventListener('ended', function() {
   this.currentTime = 0;
