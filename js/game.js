@@ -43,11 +43,6 @@ const soundJump = document.getElementById('sound-jump');
 const soundCoin = document.getElementById('sound-coin');
 const soundGameOver = document.getElementById('sound-gameover');
 
-const gravity = 0.7, friction = 0.8;
-const levelWidth = 5280;
-const MOVE_SPEED = 6.2; // ou 2.8, ajuste a gosto
-let resizeTimeout;
-let lastTime = 0;
 let score = 0;
 let animationFrameId;
 let firstLoad = true;
@@ -206,29 +201,29 @@ const images = {
 };
 
 // Caminhos corrigidos para imagens
-images.ground.src = "img/ground.png?v=1.0.6";
-images.groundGrass.src = "img/ground_grass_top.png?v=1.0.6";
-images.groundGrassRight.src = "img/ground_grass_right.png?v=1.0.6";
-images.groundGrassLeft.src = "img/ground_grass_left.png?v=1.0.6";
-images.platform.src = "img/platform.png?v=1.0.6";
-images.spike.src = "img/spike.png?v=1.0.6";
-images.idle.src = "img/idle.png?v=1.0.6";
-images.idleFlipped.src = "img/idle_flipped.png?v=1.0.6";
-images.walk.src = "img/walk.png?v=1.0.6";
-images.walkFlipped.src = "img/walk_flipped.png?v=1.0.6";
-images.jump.src = "img/jump.png?v=1.0.6";
-images.jumpFlipped.src = "img/jump_flipped.png?v=1.0.6";
-images.enemy01Walk.src = "img/enemy01_walk.png?v=1.0.6";
-images.enemy01WalkFlipped.src = "img/enemy01_walk_flipped.png?v=1.0.6";
-images.enemy01Die.src = "img/enemy01_die.png?v=1.0.6";
-images.enemy01DieFlipped.src = "img/enemy01_die_flipped.png?v=1.0.6";
+images.ground.src = "img/ground.png?v=1.0.5";
+images.groundGrass.src = "img/ground_grass_top.png?v=1.0.5";
+images.groundGrassRight.src = "img/ground_grass_right.png?v=1.0.5";
+images.groundGrassLeft.src = "img/ground_grass_left.png?v=1.0.5";
+images.platform.src = "img/platform.png?v=1.0.5";
+images.spike.src = "img/spike.png?v=1.0.5";
+images.idle.src = "img/idle.png?v=1.0.5";
+images.idleFlipped.src = "img/idle_flipped.png?v=1.0.5";
+images.walk.src = "img/walk.png?v=1.0.5";
+images.walkFlipped.src = "img/walk_flipped.png?v=1.0.5";
+images.jump.src = "img/jump.png?v=1.0.5";
+images.jumpFlipped.src = "img/jump_flipped.png?v=1.0.5";
+images.enemy01Walk.src = "img/enemy01_walk.png?v=1.0.5";
+images.enemy01WalkFlipped.src = "img/enemy01_walk_flipped.png?v=1.0.5";
+images.enemy01Die.src = "img/enemy01_die.png?v=1.0.5";
+images.enemy01DieFlipped.src = "img/enemy01_die_flipped.png?v=1.0.5";
 images.decoGrass.src = 'img/decograss.png';
-images.decor01.src = "img/decor01.png?v=1.0.6";
-images.groundBottom.src = "img/ground_bottom.png?v=1.0.6";
-images.coin.src = "img/coin.png?v=1.0.6";
+images.decor01.src = "img/decor01.png?v=1.0.5";
+images.groundBottom.src = "img/ground_bottom.png?v=1.0.5";
+images.coin.src = "img/coin.png?v=1.0.5";
 
 const mountainLayer = new Image();
-mountainLayer.src = "img/montanhas-parallax.png?v=1.0.6";
+mountainLayer.src = "img/montanhas-parallax.png?v=1.0.5";
 
 const coinSprite = {
   image: new Image(),
@@ -239,7 +234,7 @@ const coinSprite = {
   frameDelay: 90,
   delayCounter: 0
 };
-coinSprite.image.src = "img/coin.png?v=1.0.6";
+coinSprite.image.src = "img/coin.png?v=1.0.5";
 
 const checkpointSprite = {
   image: new Image(),
@@ -250,7 +245,7 @@ const checkpointSprite = {
   frameDelay: 100,
   delayCounter: 0
 };
-checkpointSprite.image.src = "img/checkpoint_midle.png?v=1.0.6";
+checkpointSprite.image.src = "img/checkpoint_midle.png?v=1.0.5";
 
 const waterSprite = {
   image: new Image(),
@@ -261,7 +256,7 @@ const waterSprite = {
   frameDelay: 15,
   delayCounter: 0
 };
-waterSprite.image.src = "img/water2.png?v=1.0.6";
+waterSprite.image.src = "img/water2.png?v=1.0.5";
 
 const finishSprite = {
   image: new Image(),
@@ -272,7 +267,7 @@ const finishSprite = {
   frameDelay: 100,
   delayCounter: 0
 };
-finishSprite.image.src = "img/finish.png?v=1.0.6";
+finishSprite.image.src = "img/finish.png?v=1.0.5";
 
 const lifeSprite = {
   image: new Image(),
@@ -283,7 +278,7 @@ const lifeSprite = {
   frameDelay: 80,
   delayCounter: 0
 };
-lifeSprite.image.src = "img/life.png?v=1.0.6";
+lifeSprite.image.src = "img/life.png?v=1.0.5";
 
 function updateWaterAnimation() {
   waterSprite.delayCounter++;
@@ -365,7 +360,8 @@ const tileMap = [
     };
 
 const keys = { left: false, right: false, jump: false };
-
+const gravity = 0.6, friction = 0.8;
+const levelWidth = 5280;
 
 let cameraX = 0, cameraY = 0, targetCameraX = 0, targetCameraY = 0;
 let lives = 3;
@@ -696,13 +692,11 @@ function checkCheckpointCollision() {
   });
 }
 
-function update(deltaTime) {
+function update() {
   if (isGamePaused) return;
 
-
-if (keys.left) player.dx = -MOVE_SPEED;
-else if (keys.right) player.dx = MOVE_SPEED;
-
+  if (keys.left) player.dx = -4;
+  else if (keys.right) player.dx = 4;
   else player.dx *= friction;
 
   if (keys.jump && !player.jumpPressed) {
@@ -722,9 +716,9 @@ else if (keys.right) player.dx = MOVE_SPEED;
     player.jumpPressed = false;
   }
 
-  player.dy += gravity* deltaTime * 60;
-  player.x += player.dx* deltaTime * 60;
-  player.y += player.dy* deltaTime * 60;
+  player.dy += gravity;
+  player.x += player.dx;
+  player.y += player.dy;
 
   objects.platforms.forEach(resolveCollision);
   objects.tiles
@@ -1117,33 +1111,17 @@ function drawPlayer() {
   }
 }
 
-function loop(timestamp) {
-  let deltaTime = (timestamp - lastTime) / 1000;
-
-  // Se o deltaTime for maior que 0.2 segundos (200ms), o jogo ficou pausado → ignora esse frame
-  if (deltaTime > 0.2) {
-    lastTime = timestamp;
-    animationFrameId = requestAnimationFrame(loop);
-    return; // ⛔ Não atualiza o jogo nesse frame
-  }
-
-  lastTime = timestamp;
-
-  update(deltaTime);
+function loop() {
+  update();
   updateWaterAnimation();
   draw();
-
   animationFrameId = requestAnimationFrame(loop);
 }
-
 
 // Event listeners
 function initGame() {
   resizeCanvas();
-  window.addEventListener("resize", () => {
-  clearTimeout(resizeTimeout);
-  resizeTimeout = setTimeout(resizeCanvas, 100);
-});
+  window.addEventListener("resize", resizeCanvas);
   buildLevelFromMap();
   initAudio();
   

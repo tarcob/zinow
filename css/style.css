@@ -54,12 +54,6 @@ html, body {
   pointer-events: none;
 }
 
-@media screen and (orientation: landscape) and (max-width: 1024px) {
-  #controls-area {
-    background: rgba(0, 0, 0, 0.3) !important; /* 🔄 Transparência mais suave */
-  }
-}
-
 /* <<< NOVOS GRUPOS LATERAIS FIXOS */
 #jump-group {
   position: absolute;
