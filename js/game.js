@@ -2,8 +2,12 @@ if ('serviceWorker' in navigator) {
   // Registra o service worker e força atualização
   navigator.serviceWorker.register('/service-worker.js')
     .then(reg => {
+      console.log("✅ Service Worker registrado com sucesso:", reg);
       reg.update(); // Força verificação de atualizações
       setInterval(() => reg.update(), 60 * 60 * 1000); // Verifica a cada hora
+    })
+    .catch(err => {
+      console.error("❌ Falha ao registrar o Service Worker:", err);
     });
 }
 
@@ -33,6 +37,7 @@ const soundJump = document.getElementById('sound-jump');
 const soundCoin = document.getElementById('sound-coin');
 const soundGameOver = document.getElementById('sound-gameover');
 
+let score = 0;
 let animationFrameId;
 let firstLoad = true;
 let isGamePaused = false;
@@ -64,6 +69,12 @@ function startGame() {
   livesDisplay.textContent = lives;
   livesDisplay.classList.remove('hidden');
   isGamePaused = false;
+
+    // Resetar score apenas se for um novo jogo
+  if (!animationFrameId) {
+    score = 0;
+    document.getElementById('score-display').textContent = score;
+  }
   
   // Resetar checkpoint quando reinicia o jogo
   lastCheckpoint = null;
@@ -184,26 +195,26 @@ const images = {
 };
 
 // Caminhos corrigidos para imagens
-images.ground.src = "img/ground.png?v=1";
-images.groundGrass.src = "img/ground_grass_top.png?v=1";
-images.groundGrassRight.src = "img/ground_grass_right.png?v=1";
-images.groundGrassLeft.src = "img/ground_grass_left.png?v=1";
-images.platform.src = "img/platform.png?v=1";
-images.spike.src = "img/spike.png?v=1";
-images.idle.src = "img/idle.png?v=1";
-images.idleFlipped.src = "img/idle_flipped.png?v=1";
-images.walk.src = "img/walk.png?v=1";
-images.walkFlipped.src = "img/walk_flipped.png?v=1";
-images.jump.src = "img/jump.png?v=1";
-images.jumpFlipped.src = "img/jump_flipped.png?v=1";
-images.enemy01Walk.src = "img/enemy01_walk.png?v=1";
-images.enemy01WalkFlipped.src = "img/enemy01_walk_flipped.png?v=1";
-images.enemy01Die.src = "img/enemy01_die.png?v=1";
-images.enemy01DieFlipped.src = "img/enemy01_die_flipped.png?v=1";
+images.ground.src = "img/ground.png?v=10";
+images.groundGrass.src = "img/ground_grass_top.png?v=10";
+images.groundGrassRight.src = "img/ground_grass_right.png?v=10";
+images.groundGrassLeft.src = "img/ground_grass_left.png?v=10";
+images.platform.src = "img/platform.png?v=10";
+images.spike.src = "img/spike.png?v=10";
+images.idle.src = "img/idle.png?v=10";
+images.idleFlipped.src = "img/idle_flipped.png?v=10";
+images.walk.src = "img/walk.png?v=10";
+images.walkFlipped.src = "img/walk_flipped.png?v=10";
+images.jump.src = "img/jump.png?v=10";
+images.jumpFlipped.src = "img/jump_flipped.png?v=10";
+images.enemy01Walk.src = "img/enemy01_walk.png?v=10";
+images.enemy01WalkFlipped.src = "img/enemy01_walk_flipped.png?v=10";
+images.enemy01Die.src = "img/enemy01_die.png?v=10";
+images.enemy01DieFlipped.src = "img/enemy01_die_flipped.png?v=10";
 images.decoGrass.src = 'img/decograss.png';
-images.decor01.src = "img/decor01.png?v=1";
-images.groundBottom.src = "img/ground_bottom.png?v=1";
-images.coin.src = "img/coin.png?v=1";
+images.decor01.src = "img/decor01.png?v=10";
+images.groundBottom.src = "img/ground_bottom.png?v=10";
+images.coin.src = "img/coin.png?v=10";
 
 const mountainLayer = new Image();
 mountainLayer.src = "img/montanhas-parallax.png?v=1";
@@ -838,17 +849,19 @@ if (checkCollision(player, e)) {
     });
   }
 
-  if (objects.coins) {
-    objects.coins = objects.coins.filter(coin => {
-      if (!coin.collected && checkCollision(player, coin)) {
-        coin.collected = true;
-        soundCoin.play();
-        createCoinSparkle(coin.x + coin.width / 2, coin.y + coin.height / 2);
-        return false;
-      }
-      return true;
-    });
-  }
+if (objects.coins) {
+  objects.coins = objects.coins.filter(coin => {
+    if (!coin.collected && checkCollision(player, coin)) {
+      coin.collected = true;
+      soundCoin.play();
+      score += 10;
+      document.getElementById('score-display').textContent = score;
+      createCoinSparkle(coin.x + coin.width / 2, coin.y + coin.height / 2);
+      return false;
+    }
+    return true;
+  });
+}
 
   if (objects.finish && objects.finish.active) {
     const finishBox = {
