@@ -201,29 +201,29 @@ const images = {
 };
 
 // Caminhos corrigidos para imagens
-images.ground.src = "img/ground.png?v=10";
-images.groundGrass.src = "img/ground_grass_top.png?v=10";
-images.groundGrassRight.src = "img/ground_grass_right.png?v=10";
-images.groundGrassLeft.src = "img/ground_grass_left.png?v=10";
-images.platform.src = "img/platform.png?v=10";
-images.spike.src = "img/spike.png?v=10";
-images.idle.src = "img/idle.png?v=10";
-images.idleFlipped.src = "img/idle_flipped.png?v=10";
-images.walk.src = "img/walk.png?v=10";
-images.walkFlipped.src = "img/walk_flipped.png?v=10";
-images.jump.src = "img/jump.png?v=10";
-images.jumpFlipped.src = "img/jump_flipped.png?v=10";
-images.enemy01Walk.src = "img/enemy01_walk.png?v=10";
-images.enemy01WalkFlipped.src = "img/enemy01_walk_flipped.png?v=10";
-images.enemy01Die.src = "img/enemy01_die.png?v=10";
-images.enemy01DieFlipped.src = "img/enemy01_die_flipped.png?v=10";
+images.ground.src = "img/ground.png?v=1.0.5";
+images.groundGrass.src = "img/ground_grass_top.png?v=1.0.5";
+images.groundGrassRight.src = "img/ground_grass_right.png?v=1.0.5";
+images.groundGrassLeft.src = "img/ground_grass_left.png?v=1.0.5";
+images.platform.src = "img/platform.png?v=1.0.5";
+images.spike.src = "img/spike.png?v=1.0.5";
+images.idle.src = "img/idle.png?v=1.0.5";
+images.idleFlipped.src = "img/idle_flipped.png?v=1.0.5";
+images.walk.src = "img/walk.png?v=1.0.5";
+images.walkFlipped.src = "img/walk_flipped.png?v=1.0.5";
+images.jump.src = "img/jump.png?v=1.0.5";
+images.jumpFlipped.src = "img/jump_flipped.png?v=1.0.5";
+images.enemy01Walk.src = "img/enemy01_walk.png?v=1.0.5";
+images.enemy01WalkFlipped.src = "img/enemy01_walk_flipped.png?v=1.0.5";
+images.enemy01Die.src = "img/enemy01_die.png?v=1.0.5";
+images.enemy01DieFlipped.src = "img/enemy01_die_flipped.png?v=1.0.5";
 images.decoGrass.src = 'img/decograss.png';
-images.decor01.src = "img/decor01.png?v=10";
-images.groundBottom.src = "img/ground_bottom.png?v=10";
-images.coin.src = "img/coin.png?v=10";
+images.decor01.src = "img/decor01.png?v=1.0.5";
+images.groundBottom.src = "img/ground_bottom.png?v=1.0.5";
+images.coin.src = "img/coin.png?v=1.0.5";
 
 const mountainLayer = new Image();
-mountainLayer.src = "img/montanhas-parallax.png?v=1";
+mountainLayer.src = "img/montanhas-parallax.png?v=1.0.5";
 
 const coinSprite = {
   image: new Image(),
@@ -234,7 +234,7 @@ const coinSprite = {
   frameDelay: 90,
   delayCounter: 0
 };
-coinSprite.image.src = "img/coin.png?v=1";
+coinSprite.image.src = "img/coin.png?v=1.0.5";
 
 const checkpointSprite = {
   image: new Image(),
@@ -245,7 +245,7 @@ const checkpointSprite = {
   frameDelay: 100,
   delayCounter: 0
 };
-checkpointSprite.image.src = "img/checkpoint_midle.png?v=1";
+checkpointSprite.image.src = "img/checkpoint_midle.png?v=1.0.5";
 
 const waterSprite = {
   image: new Image(),
@@ -256,7 +256,7 @@ const waterSprite = {
   frameDelay: 15,
   delayCounter: 0
 };
-waterSprite.image.src = "img/water2.png?v=1";
+waterSprite.image.src = "img/water2.png?v=1.0.5";
 
 const finishSprite = {
   image: new Image(),
@@ -267,7 +267,7 @@ const finishSprite = {
   frameDelay: 100,
   delayCounter: 0
 };
-finishSprite.image.src = "img/finish.png?v=1";
+finishSprite.image.src = "img/finish.png?v=1.0.5";
 
 const lifeSprite = {
   image: new Image(),
@@ -278,7 +278,7 @@ const lifeSprite = {
   frameDelay: 80,
   delayCounter: 0
 };
-lifeSprite.image.src = "img/life.png?v=1";
+lifeSprite.image.src = "img/life.png?v=1.0.5";
 
 function updateWaterAnimation() {
   waterSprite.delayCounter++;
