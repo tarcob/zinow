@@ -375,6 +375,22 @@ button {
   z-index: 2;
 }
 
+
+
+/* BLOQUEIA IMAGENS DENTRO DOS BOTÕES DE CONTROLE */
+#controls-area img,
+.btn img,
+#menu-btn img {
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -khtml-user-select: none;
+  -webkit-user-drag: none;
+  user-drag: none;
+}
+
 /* === TELA DE INÍCIO MOBILE COM IMAGEM DIFERENTE === */
 @media (max-width: 768px) {
   #start-screen.custom-start {
