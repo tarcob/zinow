@@ -391,6 +391,15 @@ button {
   user-drag: none;
 }
 
+
+@media screen and (orientation: landscape) {
+  #controls-area {
+    background: rgba(0, 0, 0, 0.05) !important; /* Quase invisível */
+    transition: background 0.3s ease-in-out;
+  }
+}
+
+
 /* === TELA DE INÍCIO MOBILE COM IMAGEM DIFERENTE === */
 @media (max-width: 768px) {
   #start-screen.custom-start {

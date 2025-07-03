@@ -1,3 +1,4 @@
+
 if ('serviceWorker' in navigator) {
   // Registra o service worker e força atualização
   navigator.serviceWorker.register('/service-worker.js')
@@ -51,6 +52,16 @@ let isFullscreen = false;
 let isMusicPlaying = false;
 let isDying = false; // Variável global para controlar o estado de morte
 
+// Variáveis de controle de frame rate
+const targetFPS = 60;
+const frameTime = 1000 / targetFPS;
+let lastFrameTime = 0;
+let deltaTime = 0;
+let framesDropped = 0;
+const maxFrameSkip = 5;
+
+
+
 // Controle das telas
 function showScreen(screenId) {
   document.querySelectorAll('.screen').forEach(screen => {
@@ -76,15 +87,13 @@ function startGame() {
   livesDisplay.classList.remove('hidden');
   isGamePaused = false;
 
-    // Resetar score apenas se for um novo jogo
-  if (!animationFrameId) {
-    score = 0;
-    document.getElementById('score-display').textContent = score;
-  }
-  
+  // Sempre zera o score ao iniciar um novo jogo
+  score = 0;
+  document.getElementById('score-display').textContent = score;
+
   // Resetar checkpoint quando reinicia o jogo
   lastCheckpoint = null;
-  
+
   // Reinicia o jogador
   const spawn = startPosition || { x: 100, y: 550 };
   Object.assign(player, spawn, { 
@@ -94,13 +103,14 @@ function startGame() {
     canDoubleJump: false,
     jumpPressed: false
   });
-  
+
   // Reinicia o jogo
   if (animationFrameId) {
     cancelAnimationFrame(animationFrameId);
   }
   animationFrameId = requestAnimationFrame(loop);
 }
+
   
 
 
@@ -169,10 +179,17 @@ function initAudio() {
   }, { once: true });
 }
 
+let isResizing = false;
+
 // Função para redimensionar o canvas
 function resizeCanvas() {
   canvas.width = window.innerWidth;
   canvas.height = window.innerHeight - controlsHeight;
+  
+  // Força verificação de colisão após redimensionamento
+  if (player) {
+    enforceCollisions();
+  }
 }
 
 const collectedLifeKeys = new Set();
@@ -571,6 +588,25 @@ function resolveCollision(r) {
   }
 }
 
+function enforceCollisions() {
+  // Verifica colisões com todos os tiles sólidos
+  objects.tiles
+    .filter(t => t.type === "ground" || t.type === "ground-grass" || 
+             t.type === "ground-grass-right" || t.type === "ground-grass-left")
+    .forEach(tile => {
+      if (checkCollision(player, tile)) {
+        resolveCollision(tile);
+      }
+    });
+  
+  // Verifica colisões com plataformas
+  objects.platforms.forEach(p => {
+    if (checkCollision(player, p)) {
+      resolveCollision(p);
+    }
+  });
+}
+
 function pauseGameForSeconds(seconds) {
   isGamePaused = true;
   return new Promise(resolve => {
@@ -692,9 +728,15 @@ function checkCheckpointCollision() {
   });
 }
 
-function update() {
-  if (isGamePaused) return;
+const deathYLimit = 3000; // ajuste se necessário
 
+
+function update() {
+
+  
+  if (isGamePaused) return;
+  
+  // Cálculo normal de movimento
   if (keys.left) player.dx = -4;
   else if (keys.right) player.dx = 4;
   else player.dx *= friction;
@@ -719,6 +761,9 @@ function update() {
   player.dy += gravity;
   player.x += player.dx;
   player.y += player.dy;
+
+  // Verificação EXTRA de colisões (garante que nunca caia)
+  enforceCollisions();
 
   objects.platforms.forEach(resolveCollision);
   objects.tiles
@@ -757,7 +802,7 @@ function update() {
     handleDeath();
   }
   
-  if (player.y > canvas.height + 100) handleDeath();
+if (player.y > deathYLimit) handleDeath();
 
   objects.enemies = objects.enemies.filter(e => {
     if (e.state === 'die') {
@@ -1111,10 +1156,28 @@ function drawPlayer() {
   }
 }
 
-function loop() {
-  update();
+function loop(timestamp) {
+  if (!lastFrameTime) lastFrameTime = timestamp;
+  deltaTime += timestamp - lastFrameTime;
+  lastFrameTime = timestamp;
+  
+  // Controle de frame rate com garantia de atualização mínima
+  let updatesCount = 0;
+  while (deltaTime >= frameTime && updatesCount < maxFrameSkip) {
+    update();
+    deltaTime -= frameTime;
+    updatesCount++;
+  }
+  
+  // Garante pelo menos uma atualização física mesmo com FPS muito baixo
+  if (updatesCount === 0) {
+    update();
+    deltaTime = 0;
+  }
+  
   updateWaterAnimation();
   draw();
+  
   animationFrameId = requestAnimationFrame(loop);
 }
 
