@@ -77,9 +77,7 @@
   </div>
 
   <!-- Elementos de áudio -->
-  <audio id="background-music" loop>
-    <source src="sound/musiclevel01.mp3" type="audio/mpeg">
-  </audio>
+
   <audio id="sound-life">
     <source src="sound/life.mp3" type="audio/mpeg">
   </audio>
@@ -110,9 +108,20 @@
   <source src="sound/gameover.mp3" type="audio/mpeg">
 </audio>
 
-<audio id="intro-music" loop>
+<!-- 🎵 Sistema Modular de Músicas -->
+<audio id="music-start" loop>
   <source src="sound/intro.mp3" type="audio/mpeg">
 </audio>
+
+<audio id="music-game" loop>
+  <source src="sound/musiclevel01.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="music-gameover">
+  <source src="sound/gameover.mp3" type="audio/mpeg">
+</audio>
+
+
 
   <script src="js/game.js?v=1.0.2"></script>
   <script>
