@@ -13,6 +13,23 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 <body>
+  <!-- Tela de Vinheta -->
+<div id="intro-screen" class="screen visible">
+  <div class="intro-logo fade-in-out">
+    <img src="img/logo-empresa.png" alt="Logo Empresa" />
+    <p>APRESENTA</p>
+  </div>
+</div>
+
+<!-- Tela de Mensagem -->
+<div id="vinheta-screen" class="screen hidden">
+  <div class="screen-content no-bg">
+    <img src="img/vinheta.png" alt="Vinheta" class="vinheta-img" />
+    <p class="vinheta-text">Esse jogo pode ser jogado tanto na vertical quanto na horizontal no celular.</p>
+    <button id="vinheta-ok-btn" class="menu-btn">OK</button>
+  </div>
+</div>
+
 <!-- Tela de Início -->
 <div id="start-screen" class="screen custom-start">
   <div class="screen-content no-bg">
@@ -91,6 +108,10 @@
 
   <audio id="sound-gameover">
   <source src="sound/gameover.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="intro-music" loop>
+  <source src="sound/intro.mp3" type="audio/mpeg">
 </audio>
 
   <script src="js/game.js?v=1.0.2"></script>

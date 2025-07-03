@@ -43,6 +43,8 @@ const soundFinish = document.getElementById('sound-finish');
 const soundJump = document.getElementById('sound-jump');
 const soundCoin = document.getElementById('sound-coin');
 const soundGameOver = document.getElementById('sound-gameover');
+const introMusic = document.getElementById('intro-music');
+
 
 let score = 0;
 let animationFrameId;
@@ -68,19 +70,29 @@ function showScreen(screenId) {
     screen.classList.add('hidden');
   });
   document.getElementById(screenId).classList.remove('hidden');
-  
+
   if (screenId === 'game-container') {
-    document.getElementById('game-container').classList.remove('hidden');
+    introMusic.pause();
+    introMusic.currentTime = 0;
+
     if (!isGamePaused) {
       backgroundMusic.play().catch(e => console.log("Erro ao iniciar música:", e));
     }
-  } else {
-    document.getElementById('game-container').classList.add('hidden');
+  } else if (screenId === 'start-screen') {
     backgroundMusic.pause();
+    backgroundMusic.currentTime = 0;
+    
+    introMusic.play().catch(e => console.log("Erro ao tocar intro:", e));
+  } else {
+    backgroundMusic.pause();
+    introMusic.pause();
   }
 }
 
+
 function startGame() {
+  introMusic.pause();
+  introMusic.currentTime = 0;
   showScreen('game-container');
   lives = 3;
   livesDisplay.textContent = lives;
@@ -1183,21 +1195,29 @@ function loop(timestamp) {
   animationFrameId = requestAnimationFrame(loop);
 }
 
-// Event listeners
 function initGame() {
   resizeCanvas();
   window.addEventListener("resize", resizeCanvas);
   buildLevelFromMap();
   initAudio();
-  
-  // Configura volume padrão para todos os sons
+
+  const hasSeenIntro = sessionStorage.getItem('vinheta-exibida');
+
+  if (!hasSeenIntro) {
+    showScreen('intro-screen');
+    setTimeout(() => {
+      showScreen('vinheta-screen');
+    }, 3000);
+    sessionStorage.setItem('vinheta-exibida', 'true');
+  } else {
+    showScreen('start-screen');
+  }
+
   [soundLife, soundSpike, soundCoin, soundWater, soundEnemy, soundEnemyDie, soundCheckpoint, soundFinish, soundJump].forEach(sound => {
     if (sound) sound.volume = 0.7;
   });
-
-  // Mostra a tela de início
-  showScreen('start-screen');
 }
+
 
 document.addEventListener("keydown", e => {
   if (e.key === "ArrowLeft") keys.left = true;
@@ -1234,3 +1254,7 @@ backgroundMusic.addEventListener('ended', function() {
 
 // Inicializa o jogo quando o DOM estiver pronto
 document.addEventListener("DOMContentLoaded", initGame);
+
+document.getElementById('vinheta-ok-btn').addEventListener('click', () => {
+  showScreen('start-screen');
+});
