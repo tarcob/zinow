@@ -71,23 +71,25 @@ function showScreen(screenId) {
   });
   document.getElementById(screenId).classList.remove('hidden');
 
-  if (screenId === 'game-container') {
-    introMusic.pause();
-    introMusic.currentTime = 0;
+  // Sempre pausar ambas as músicas primeiro
+  backgroundMusic.pause();
+  introMusic.pause();
+  backgroundMusic.currentTime = 0;
+  introMusic.currentTime = 0;
 
+  if (screenId === 'game-container') {
+    // Ao entrar no jogo, toca a música da fase
     if (!isGamePaused) {
       backgroundMusic.play().catch(e => console.log("Erro ao iniciar música:", e));
     }
   } else if (screenId === 'start-screen') {
-    backgroundMusic.pause();
-    backgroundMusic.currentTime = 0;
-    
+    // Ao ir para a tela de início, toca só a música de intro
     introMusic.play().catch(e => console.log("Erro ao tocar intro:", e));
-  } else {
-    backgroundMusic.pause();
-    introMusic.pause();
   }
+
+  // OBS: nas telas intro-screen e vinheta-screen, nenhuma música toca
 }
+
 
 
 function startGame() {

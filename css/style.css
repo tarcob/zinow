@@ -462,7 +462,7 @@ button {
 
 /* Tela da vinheta */
 #vinheta-screen .vinheta-img {
-  max-width: 90%;
+  max-width: 60%;
   margin-bottom: 20px;
 
 }
