@@ -1,9 +1,9 @@
-const CACHE_NAME = 'zino world-v12'; // Atualize a versão do cache
+const CACHE_NAME = 'zino world-v13'; // Atualize a versão do cache
 const ASSETS = [
   '/',
-  '/index.html?v=1.0.6', // Adicione parâmetro de versão
-  '/css/style.css?v=1.0.6',
-  '/js/game.js?v=1.0.6',
+  '/index.html?v=1.0.7', // Adicione parâmetro de versão
+  '/css/style.css?v=1.0.7',
+  '/js/game.js?v=1.0.7',
   // ... outros assets
 ];
 

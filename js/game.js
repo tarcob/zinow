@@ -368,7 +368,7 @@ const tileMap = [
       '👾': { type: 'enemy', color: '#000', width: 40, height: 40 },
       '🏁': { type: 'finish', color: '#fff', width: 40, height: 40 },
       '💗': { type: 'life', color: '#f00', width: 40, height: 40 },
-      '💰': { type: 'coin', color: 'yellow', width: 40, height: 40 },
+      '💰': { type: 'coin', color: 'yellow', width: 25, height: 25 },
       '⬜': { type: 'start', color: 'transparent', width: 40, height: 40 },
       '🍃': { type: 'decoGrass', color: 'transparent', width: 40, height: 40 },
       '🌼': { type: 'decor01', color: 'transparent', width: 40, height: 40 },
@@ -654,6 +654,8 @@ async function handleDeath() {
             collectedLifeKeys.clear();
             cameraX = 0;
             cameraY = 0;
+
+              firstLoad = true;
             
             // 3. Reconstruir todos os objetos do jogo (incluindo checkpoints)
             objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], coins: [], finish: null };
@@ -1010,7 +1012,7 @@ function draw() {
     } else if (tile.type === "decoGrass" && images.decoGrass.complete) {
       ctx.drawImage(images.decoGrass, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
     } else if (tile.type === "decor01" && images.decor01.complete) {
-      ctx.drawImage(images.decor01, tile.x - cameraX, tile.y - cameraY + 6, tile.width, tile.height);
+      ctx.drawImage(images.decor01, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
     } else if (tile.type === "water" && waterSprite.image.complete) {
       drawAnimatedWater(tile);
     } else {
