@@ -145,7 +145,6 @@ html, body {
   position: absolute;
   top: 10px;
   right: 10px;
-  background: rgba(0,0,0,0.5);
   color: white;
   padding: 5px 15px;
   border-radius: 6px;
@@ -160,13 +159,46 @@ html, body {
   z-index: 1000;
   user-select: none;
   pointer-events: none;
+  
+  /* Novas propriedades para alinhar número e imagem */
+  display: flex;
+  align-items: center; /* Centraliza verticalmente */
+  gap: 10px; /* Espaço entre número e moeda */
+}
+
+.coin-icon {
+  width: 40px; /* Ajuste conforme necessário */
+  height: 40px; /* Mantém a proporção */
+}
+
+#timer-display {
+  position: absolute;
+  top: 60px;
+  left: 2.5%;
+  transform: translateX(-50%);
+  color: white;
+  padding: 13px 20px;
+  font-family: 'Press Start 2P', monospace;
+  font-size: 13px;
+  border-radius: 4px;
+  z-index: 10;
+  text-shadow: 
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px 1px 0 #000,
+     1px 1px 0 #000;
+
+     @media (max-width: 768px) {
+     top: 60px;
+     left: 15%;
+      }
 }
 
 #hud {
   position: absolute;
   top: 10px;
   left: 10px;
-  background: rgba(0,0,0,0.5);
+  /*background: rgba(0,0,0,0.5);*/
   color: white;
   padding: 5px 10px;
   border-radius: 6px;
@@ -319,32 +351,55 @@ button {
   height: 100%;
 }
 
-/* Tela de Game Over modificada */
+/* Tela de Game Over - Versão Corrigida */
 #gameover-screen {
-  background: #000; /* Fundo totalmente preto */
+  background: rgba(0, 0, 0, 0.9);
 }
 
 #gameover-screen .screen-content {
-  background: transparent; /* Remove o fundo do conteúdo */
-  border: none; /* Remove a borda */
-  padding: 0; /* Remove o padding */
+  background: transparent;
+  border: none;
+  padding: 20px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 20px;
 }
 
 #gameover-screen h1 {
-  color: white; /* Texto em branco */
-  margin-bottom: 20px;
-  text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+  color: #ff0000;
+  font-size: 3rem;
+  margin: 0;
+  text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+  font-family: 'Bungee', cursive;
 }
 
-/* Adicione isso ao seu arquivo CSS */
 #dead-image {
-  max-width: 80%; /* Ajusta o tamanho da imagem */
+  max-width: 60%;
   height: auto;
-  animation: fadeIn 1s ease-in-out;
+  margin: 30px 0;
+}
+
+.game-time-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.game-time-label {
+  color: #ffff00;
+  font-size: 17px;
+  font-family: 'Press Start 2P', monospace;
+  margin: 30px 0;
+}
+
+.game-time-value {
+  color: #ffffff;
+  font-size: 15px;
+  font-family: 'Press Start 2P', monospace;
+  margin: 15px 0;
 }
 
 @keyframes fadeIn {

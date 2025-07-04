@@ -7,6 +7,8 @@
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="css/style.css?v=1.0.2">
   <link href="https://fonts.googleapis.com/css2?family=Bungee&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+
   <meta name="theme-color" content="#87ceeb" />
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -40,8 +42,12 @@
 <!-- Tela de Game Over -->
 <div id="gameover-screen" class="screen hidden">
   <div class="screen-content">
-    <h1>Game Over</h1>
+    <h1>GAME OVER</h1>
     <img src="img/dead.png" id="dead-image" alt="Personagem morto">
+    <div class="game-time-container">
+      <p class="game-time-label">TEMPO DE JOGO:</p>
+      <p class="game-time-value" id="final-time-display">00:00</p>
+    </div>
   </div>
 </div>
 
@@ -72,9 +78,14 @@
         </div>
       </div>
     </div>
-    <div id="hud"><img src="img/vidascount.png"/><span id="lives">3</span></div>
-    <div id="score-display">0</div>
-  </div>
+<div id="hud">
+  <img src="img/vidascount.png"/><span id="lives">3</span>
+</div>
+<div id="timer-display">00:00:000</div>
+<div id="score-display">
+  <span class="score-number">0</span>
+  <img src="img/coin_display.png" class="coin-icon">
+</div>
 
   <!-- Elementos de áudio -->
 

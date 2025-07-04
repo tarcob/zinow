@@ -64,6 +64,13 @@ let deltaTime = 0;
 let framesDropped = 0;
 const maxFrameSkip = 5;
 
+const timerDisplay = document.getElementById('timer-display');
+
+let gameStartTime = null;
+let elapsedTime = 0;
+let timerInterval = null;
+
+let finalTime = null; // ⏱️ será usado futuramente
 
 
 // Controle das telas
@@ -130,36 +137,34 @@ function resumeGameMusic() {
 
 
 function startGame() {
-  
-  
-  showScreen('game-container');
-  lives = 3;
-  livesDisplay.textContent = lives;
-  livesDisplay.classList.remove('hidden');
-  isGamePaused = false;
+    resetTimer(); // Garante que o timer seja resetado ao iniciar novo jogo
+    
+    showScreen('game-container');
+    lives = 3;
+    gameStartTime = performance.now(); // Sempre começa do zero
+    elapsedTime = 0;
+    startTimer();
+    
+    livesDisplay.textContent = lives;
+    livesDisplay.classList.remove('hidden');
+    isGamePaused = false;
+    score = 0;
+    document.getElementById('score-display').textContent = score;
+    lastCheckpoint = null;
 
-  // Sempre zera o score ao iniciar um novo jogo
-  score = 0;
-  document.getElementById('score-display').textContent = score;
+    const spawn = startPosition || { x: 100, y: 550 };
+    Object.assign(player, spawn, { 
+        dx: 0, 
+        dy: 0,
+        jumping: false,
+        canDoubleJump: false,
+        jumpPressed: false
+    });
 
-  // Resetar checkpoint quando reinicia o jogo
-  lastCheckpoint = null;
-
-  // Reinicia o jogador
-  const spawn = startPosition || { x: 100, y: 550 };
-  Object.assign(player, spawn, { 
-    dx: 0, 
-    dy: 0,
-    jumping: false,
-    canDoubleJump: false,
-    jumpPressed: false
-  });
-
-  // Reinicia o jogo
-  if (animationFrameId) {
-    cancelAnimationFrame(animationFrameId);
-  }
-  animationFrameId = requestAnimationFrame(loop);
+    if (animationFrameId) {
+        cancelAnimationFrame(animationFrameId);
+    }
+    animationFrameId = requestAnimationFrame(loop);
 }
 
   
@@ -170,6 +175,8 @@ function togglePause() {
 
   if (isGamePaused) {
 
+    stopTimer();
+
     document.getElementById('pause-screen').classList.add('visible-by-focus');
     
     pauseGameMusic();
@@ -177,12 +184,54 @@ function togglePause() {
     document.getElementById('game-container').classList.add('hidden');
     document.getElementById('pause-screen').classList.remove('hidden');
   } else {
+    gameStartTime = performance.now() - elapsedTime;
+    startTimer()
     resumeGameMusic();
     document.getElementById('pause-screen').classList.add('hidden');
     document.getElementById('pause-screen').classList.remove('visible-by-focus');
     document.getElementById('game-container').classList.remove('hidden');
   }
+
+  
 }
+
+function startTimer() {
+  if (timerInterval) return;
+
+  timerInterval = setInterval(() => {
+    const now = performance.now();
+    elapsedTime = now - gameStartTime;
+    
+    // Exibe sem milissegundos (MM:SS)
+    const minutes = Math.floor(elapsedTime / 60000);
+    const seconds = Math.floor((elapsedTime % 60000) / 1000);
+    timerDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  }, 100);
+}
+
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+}
+
+function resetTimer() {
+  stopTimer();
+  gameStartTime = null;
+  elapsedTime = 0;
+  timerDisplay.textContent = "00:00:000";
+}
+
+function formatTime(ms, showMilliseconds = false) {
+  const minutes = Math.floor(ms / 60000);
+  const seconds = Math.floor((ms % 60000) / 1000);
+  
+  if (showMilliseconds) {
+    const milliseconds = Math.floor(ms % 1000);
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}.${String(milliseconds).padStart(3, '0')}`;
+  }
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+}
+
 
 
 // Configurações de tela cheia
@@ -665,7 +714,17 @@ async function handleDeath() {
         await pauseGameForSeconds(1);
         isGamePaused = true;
         
-       
+        // Armazena o tempo final quando perde todas as vidas
+        finalTime = elapsedTime;
+    // No handleDeath() quando game over ocorre
+const finalTimeDisplay = document.getElementById('final-time-display');
+if (finalTimeDisplay) {
+  const minutes = Math.floor(finalTime / 60000);
+  const seconds = Math.floor((finalTime % 60000) / 1000);
+  const milliseconds = Math.floor(finalTime % 1000);
+  finalTimeDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(milliseconds).padStart(3, '0')}`;
+}
+        console.log("Tempo final:", finalTime);
         
         // Mostrar tela de game over
         showScreen('gameover-screen');
@@ -677,8 +736,6 @@ async function handleDeath() {
                 cancelAnimationFrame(animationFrameId);
             }
             
-            
-            
             // 2. Resetar TODOS os estados do jogo
             lives = 3;
             isDying = false;
@@ -687,12 +744,11 @@ async function handleDeath() {
             collectedLifeKeys.clear();
             cameraX = 0;
             cameraY = 0;
-
-              firstLoad = true;
+            firstLoad = true;
             
-            // 3. Reconstruir todos os objetos do jogo (incluindo checkpoints)
+            // 3. Reconstruir todos os objetos do jogo
             objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], coins: [], finish: null };
-            buildLevelFromMap(); // Isso vai recriar todos os checkpoints
+            buildLevelFromMap();
             
             // 4. Resetar o jogador
             const spawn = startPosition || { x: 100, y: 550 };
@@ -704,10 +760,13 @@ async function handleDeath() {
                 jumpPressed: false
             });
             
-            // 5. Mostrar a tela inicial como novo jogo
+            // 5. Resetar o timer
+            resetTimer();
+            
+            // 6. Mostrar a tela inicial como novo jogo
             showScreen('start-screen');
             
-            // 6. Resetar a exibição de vidas
+            // 7. Resetar a exibição de vidas
             livesDisplay.textContent = lives;
             livesDisplay.classList.remove('hidden');
         }, 9000);
@@ -721,20 +780,6 @@ async function handleDeath() {
         soundSpike.play();
     }
 
-    if (lives < 1) {
-        livesDisplay.classList.add('hidden');
-        await pauseGameForSeconds(1);
-        isDying = false; // Resetar antes de mostrar game over
-        showScreen('gameover-screen');
-        return;
-    } else {
-        livesDisplay.classList.remove('hidden');
-    }
-
-    if (objects.finish) {
-        objects.finish.active = true;
-    }
-
     await pauseGameForSeconds(1);
 
     const spawn = lastCheckpoint || startPosition;
@@ -746,7 +791,7 @@ async function handleDeath() {
         jumpPressed: false
     });
     
-    isDying = false; // Resetar após o respawn
+    isDying = false;
 }
 
 function checkCheckpointCollision() {
@@ -949,22 +994,31 @@ if (objects.coins) {
   });
 }
 
-  if (objects.finish && objects.finish.active) {
+// Na verificação do finish - quando completa a fase:
+if (objects.finish && objects.finish.active) {
     const finishBox = {
-      x: objects.finish.x,
-      y: objects.finish.y - 40,
-      width: 40,
-      height: 120
+        x: objects.finish.x,
+        y: objects.finish.y - 40,
+        width: 40,
+        height: 120
     };
     if (checkCollision(player, finishBox)) {
-      objects.finish.active = false;
-      soundFinish.play();
-      isGamePaused = true;
-      setTimeout(() => {
-        window.location.href = "index2.html";
-      }, 2000);
+        objects.finish.active = false;
+        
+        // ⏱️ Pausa o timer imediatamente
+        stopTimer();
+        
+        // ⏱️ Armazena o tempo final quando completa a fase
+        finalTime = elapsedTime;
+        console.log("Tempo final (fase completa):", finalTime);
+        
+        soundFinish.play();
+        isGamePaused = true;
+        setTimeout(() => {
+            window.location.href = "index2.html";
+        }, 2000);
     }
-  }
+}
 
   player.x = Math.max(0, Math.min(player.x, levelWidth - player.width));
   targetCameraX = Math.max(0, Math.min(player.x - canvas.width / 2, levelWidth - canvas.width));
