@@ -1,3 +1,7 @@
+import { levelScreens } from './screen.js';  // Adicione esta linha
+import { levels, gameSettings, gameState } from './levels.js';
+
+const { lastCheckpoint, collectedLifeKeys, startPosition, firstLoad } = gameState;
 
 if ('serviceWorker' in navigator) {
   // Registra o service worker e força atualização
@@ -11,6 +15,7 @@ if ('serviceWorker' in navigator) {
       console.error("❌ Falha ao registrar o Service Worker:", err);
     });
 }
+
 
 navigator.serviceWorker.addEventListener('controllerchange', () => {
   console.log("Nova versão do PWA ativada. Recarregando...");
@@ -26,6 +31,8 @@ window.addEventListener('pageshow', (event) => {
 });
 
 // Variáveis globais
+const objects = gameState.objects;
+
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const livesDisplay = document.getElementById("lives");
@@ -48,10 +55,11 @@ const musicStart = document.getElementById('music-start');
 const musicGame = document.getElementById('music-game');
 const musicGameOver = document.getElementById('music-gameover');
 
+
 let currentMusic = null;
 let score = 0;
 let animationFrameId;
-let firstLoad = true;
+//let firstLoad = true;
 let isGamePaused = false;
 let isFullscreen = false;
 let isDying = false; // Variável global para controlar o estado de morte
@@ -80,14 +88,17 @@ function showScreen(screenId) {
   });
   document.getElementById(screenId).classList.remove('hidden');
 
-  // 🔁 Controle de música por tela SEM reiniciar se for a mesma
   let nextMusic = null;
   let loop = true;
 
   if (screenId === 'game-container') {
+    if (currentMusic === musicGame) return;
     nextMusic = musicGame;
   } else if (screenId === 'start-screen') {
-    nextMusic = musicStart;
+    // Mantém a música de início se já estiver tocando (vinheta -> start-screen)
+    if (currentMusic !== musicStart) {
+      nextMusic = null;
+    }
   } else if (screenId === 'gameover-screen') {
     nextMusic = musicGameOver;
     loop = false;
@@ -95,7 +106,7 @@ function showScreen(screenId) {
 
   // ✅ Só troca a música se for diferente da atual
   if (nextMusic !== currentMusic) {
-    if (currentMusic) {
+    if (currentMusic && currentMusic !== musicStart) { // Não pausa a musicStart se for manter
       currentMusic.pause();
       currentMusic.currentTime = 0;
     }
@@ -110,17 +121,15 @@ function showScreen(screenId) {
 
 
 
-function playMusic(musicElement, loop = true) {
-  if (currentMusic && currentMusic !== musicElement) {
-    currentMusic.pause();
-    currentMusic.currentTime = 0;
-  }
-
-  if (musicElement && currentMusic !== musicElement) {
-    musicElement.loop = loop;
-    musicElement.play().catch(e => console.log("Erro ao tocar música:", e));
-    currentMusic = musicElement;
-  }
+function playMusic(newMusic) {
+    if (currentMusic && currentMusic !== newMusic) {
+        currentMusic.pause();
+        currentMusic.currentTime = 0; // Opcional: Reinicia a música anterior
+    }
+    currentMusic = newMusic;
+    if (currentMusic.paused) { // Só tenta tocar se não estiver já tocando
+        currentMusic.play().catch(e => console.log("Erro ao tocar música:", e));
+    }
 }
 
 function pauseGameMusic() {
@@ -129,38 +138,67 @@ function pauseGameMusic() {
   }
 }
 
-function resumeGameMusic() {
-  if (currentMusic && currentMusic.paused) {
-    currentMusic.play().catch(e => console.log("Erro ao retomar música:", e));
-  }
-}
 
 
-function startGame() {
-    resetTimer(); // Garante que o timer seja resetado ao iniciar novo jogo
+// Modifique a função startGame em game.js
+async function startGame() {
+    // Para a música atual se estiver tocando
+    if (currentMusic) {
+        currentMusic.pause();
+        currentMusic.currentTime = 0;
+    }
+
+    const level = levels.getCurrentLevel();
     
+    // Configura a música do nível atual (com tratamento de erro robusto)
+    if (level.music) {
+        currentMusic = new Audio(level.music);
+        currentMusic.loop = true;
+        currentMusic.volume = 0.6;
+
+        try {
+            await currentMusic.play().catch(e => {
+                // Ignora AbortError (interrupção normal ao trocar de música)
+                if (e.name !== 'AbortError') {
+                    console.warn("Erro ao tocar música do level:", e);
+                }
+            });
+        } catch (e) {
+            console.warn("Erro inesperado ao tocar música:", e);
+        }
+    }
+
+    // Reset do jogo (o restante permanece igual)
+    resetTimer();
     showScreen('game-container');
+
     lives = 3;
-    gameStartTime = performance.now(); // Sempre começa do zero
+    gameState.collectedLifeKeys = new Set();
+    gameStartTime = performance.now();
     elapsedTime = 0;
     startTimer();
-    
+
     livesDisplay.textContent = lives;
     livesDisplay.classList.remove('hidden');
     isGamePaused = false;
+
     score = 0;
     document.getElementById('score-display').textContent = score;
-    lastCheckpoint = null;
+    gameState.lastCheckpoint = null;
 
-    const spawn = startPosition || { x: 100, y: 550 };
-    Object.assign(player, spawn, { 
-        dx: 0, 
+    buildLevelFromMap();
+
+    // Posiciona o jogador
+    const spawn = gameState.startPosition || { x: 100, y: 550 };
+    Object.assign(player, spawn, {
+        dx: 0,
         dy: 0,
         jumping: false,
         canDoubleJump: false,
         jumpPressed: false
     });
 
+    // Reinicia o loop do jogo
     if (animationFrameId) {
         cancelAnimationFrame(animationFrameId);
     }
@@ -174,26 +212,32 @@ function togglePause() {
   isGamePaused = !isGamePaused;
 
   if (isGamePaused) {
-
     stopTimer();
 
+    // 🔒 Somente pausa a música atual, sem tocar nenhuma outra
+    if (currentMusic && !currentMusic.paused) {
+      currentMusic.pause();
+    }
+
     document.getElementById('pause-screen').classList.add('visible-by-focus');
-    
-    pauseGameMusic();
-    
     document.getElementById('game-container').classList.add('hidden');
     document.getElementById('pause-screen').classList.remove('hidden');
+
   } else {
     gameStartTime = performance.now() - elapsedTime;
-    startTimer()
-    resumeGameMusic();
+    startTimer();
+
+    // 🔒 Somente retoma a música que já estava tocando, sem trocar
+    if (currentMusic && currentMusic.paused) {
+      currentMusic.play().catch(e => console.log("Erro ao retomar música:", e));
+    }
+
     document.getElementById('pause-screen').classList.add('hidden');
     document.getElementById('pause-screen').classList.remove('visible-by-focus');
     document.getElementById('game-container').classList.remove('hidden');
   }
-
-  
 }
+
 
 function startTimer() {
   if (timerInterval) return;
@@ -275,7 +319,7 @@ function resizeCanvas() {
   }
 }
 
-const collectedLifeKeys = new Set();
+//const collectedLifeKeys = new Set();
 
 const images = {
   ground: new Image(),
@@ -398,39 +442,7 @@ function drawAnimatedWater(tile) {
   );
 }
 
-const tileMap = [
 
-"🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫",
-"🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫",
-"🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫",
-"🟫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫🟫🟫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫🟫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💗⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💗⬛⬛⬛🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫",
-"🟫⬛💗⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💰⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💰💰💰⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💗⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛🟫⬛⬛⬛⬛⬛⬛⬛👾🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫",
-"🟫⬛⬛⬛⬛⬛⬛💰⬛⬛⬛⬛⬛⬛🔴🟢🔵⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟩⬛🔴🟢🟢🟢🟢🟢🟢🔵⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🔻⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🔻⬛⬛⬛🔻⬛⬛⬛⬛🟩⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛💗⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🏁⬛⬛⬛🟫",  
-"🟫🟢🟢🔵⬛🌼⬛⬛⬛⬛⬛🔴🟢🟢🟫🟫🟫⬛⬛⬛🟥🟥⬛⬛⬛🟥🟥⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥🟥🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥🟥🟥🟥🟥🟥⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛🟫⬛🟥⬛👾⬛⬛⬛⬛⬛🟥⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫",
-"🟫🟫🟫🟫🟢🔵⬛⬛⬛🔴🟢🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⚫⚫⚫⚫⚫⚫⚫⚫⚫⬛⬛⬛⬛🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💗⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫⬛🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫",
-"🟫🟫🟫🟫🟫🟫🔻🔻🔻🟫🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫⬛⬛⬛👾🟫⬛💗⬛🟫",
-"🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛💰💰💰⬛⬛⬛⬛⬛⬛🟥🟥🟥🟥🟥🟥⬛⬛⬛⬛⬛⬛🔻🔻🔻🔻🟥⬛⬛⬛👾⬛⬛⬛🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛🔻🔻💗⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫",  
-"🟫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫⚫🟫🟫🔻⬛⬛⬛⬛⬛🟥🟥🟥🟥🟥⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛⬛⬛🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥🟥🟥🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🔻🔻🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛💗⬛🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫⚫⚫⚫⚫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🔻⬛💗🟫🟫👾⬛💗⬛🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🔻🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⚫⚫⚫⚫⚫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💗⬛🟫🟫⬛⬛⬛⬛🟫⬛⬛⬛🟥🟥🟥🟥🟥⬛⬛⬛⬛⬛⬛💗⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💗⬛⬛⬛⬛⬛🔻⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛🟫🟫🟫🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥⬛⬛⬛⬛⬛🟥⬛⬛⬛🟫🟫⬛⬛💗⬛🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥⬛⬛⬛⬛⬛⬛⬛🔻🔻🔻⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥🟥🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫⬛⬛🔻⬛⬛⬛⬛⬛⬛🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛⬛🟥🟥⬛⬛🔻🟫🟫⬛⬛⬛⬛🟫⬛⬛⬛⬛⬛⬛⬛💰💰⬛⬛⬛⬛⬛🟩⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥🟥🟥🟥🟥🟥⬛⬛⬛🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💗⬛⬛⬛⬛⬛🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛🟥🟥⬛⬛⬛💗⬛🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫⬛⬛🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥🟥🟥🟥⬛⬛⬛⬛🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥⬛⬛⬛💰⬛⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟩⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🔻🔻🔻⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥⬛⬛⬛🟫",
-"🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💰⬛⬛⬛⬛⬛⬛💰⬛⬛⬛⬛⬛⬛⬛🔻🟫🟫🟫⬛⬛⬛⬛💰⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥🟥⬛⬛⬛🟥🟥⬛⬛⬛🟥🟥⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫",
-"🟫⬛⬛⬛⬛⬜⬛⬛🌼⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛💰⬛⬛⬛⬛⬛⬛⬛💰⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛⬛🟥🟥⬛⬛🟫👾⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫⬛⬛⬛👾💗⬛🟫",
-"🟫🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🟢🔵🔻🔻🔴🟢🟢🟢🔵🔻🔻⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫🔵⬛⬛⬛🟥⬛⬛⬛🔴🟢🟢🟢🟢🔵⬛⬛⬛⬛🟫🟫🟫🟫👾⬛⬛⬛⬛🟫🟫🟫⬛👾⬛⬛⬛🟫⬛👾⬛⬛🟫⬛⬛👾⬛🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫⬛⬛⬛⬛⬛⬛⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫⬛⬛🟥⬛⬛⬛🟫🟫🟫🟫🟫🟫🟫🟫🟫",
-"🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟦🟦🟦🟦🟦🟦🟦🟫🟫🟫🟫🟫🟫🟦🟦🟦🟦🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟦🟦🟦🟦🟦🟦🟦🟦🟫🟫🟫🟦🟦🟦🟦🟦🟦🟦🟦🟦🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟦🟦🟦🟦🟦🟦🟫🟫🟫🟫🟫🟫🟫🟫🟫",
-"🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫",
-"🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫",
-"🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫",
-"🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫🟫",
-];
-  
   
 
   
@@ -460,12 +472,13 @@ const tileMap = [
     };
 
 const keys = { left: false, right: false, jump: false };
-const gravity = 0.6, friction = 0.8;
+const gravity = gameSettings.gravity;
+const friction = gameSettings.friction;
 const levelWidth = 5280;
 
 let cameraX = 0, cameraY = 0, targetCameraX = 0, targetCameraY = 0;
 let lives = 3;
-let lastCheckpoint = null;
+//let lastCheckpoint = null;
 let levelMinY = Infinity, levelMaxY = -Infinity;
 
 const player = {
@@ -488,8 +501,8 @@ const playerSprite = {
   facing: 'right'
 };
 
-let startPosition = null;
-let objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], coins: [], finish: null };
+//let startPosition = null;
+//let objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], coins: [], finish: null };
 
 // Sistema de partículas
 let waterParticles = [];
@@ -569,43 +582,60 @@ function hexToRgb(hex) {
 }
 
 function buildLevelFromMap() {
+  const currentLevel = levels.getCurrentLevel();
+  const tileMap = currentLevel.tileMap;
+
+  // Limpa os objetos anteriores
+  gameState.objects.tiles = [];
+  gameState.objects.platforms = [];
+  gameState.objects.checkpoints = [];
+  gameState.objects.spikes = [];
+  gameState.objects.enemies = [];
+  gameState.objects.lives = [];
+  gameState.objects.coins = [];
+  gameState.objects.finish = null;
+
+  // Reset opcional das vidas coletadas (caso deseje manter progresso, remova esta linha)
+ 
+
   tileMap.forEach((row, rowIndex) => {
     [...row].forEach((char, colIndex) => {
       const def = tileTypes[char];
       if (!def) return;
+
       const x = colIndex * 40;
       const baseY = canvas.height - (tileMap.length - rowIndex) * 40;
       const y = baseY + (40 - def.height);
       const props = { x, y, width: def.width, height: def.height };
 
-      if (def.type === 'ground' || def.type === 'water' || def.type === 'ground-grass' || 
+      if (def.type === 'ground' || def.type === 'water' || def.type === 'ground-grass' ||
           def.type === 'ground-grass-right' || def.type === 'ground-grass-left') {
-        objects.tiles.push({ ...props, type: def.type, color: def.color });
+        gameState.objects.tiles.push({ ...props, type: def.type, color: def.color });
       } else if (def.type === 'decor01') {
-        objects.tiles.push({ ...props, type: 'decor01' });
+        gameState.objects.tiles.push({ ...props, type: 'decor01' });
       } else if (def.type === 'decoGrass') {
-        objects.tiles.push({ ...props, type: 'decoGrass' });
+        gameState.objects.tiles.push({ ...props, type: 'decoGrass' });
       } else if (def.type === 'ground-fake') {
-        objects.tiles.push({ ...props, type: 'ground-fake' });
+        gameState.objects.tiles.push({ ...props, type: 'ground-fake' });
       } else if (def.type === 'ground-bottom') {
-        objects.tiles.push({ ...props, type: 'ground-bottom' });
+        gameState.objects.tiles.push({ ...props, type: 'ground-bottom' });
       } else if (def.type === 'platform') {
-        objects.platforms.push(props);
+        gameState.objects.platforms.push(props);
       } else if (def.type === 'checkpoint') {
-        objects.checkpoints.push({ x, y: y + 40, active: true });
+        gameState.objects.checkpoints.push({ x, y: y + 40, active: true });
       } else if (def.type === 'finish') {
-        objects.finish = { x, y: y + 40, active: true };
+        gameState.objects.finish = { x, y: y + 40, active: true };
       } else if (def.type === 'start') {
-        if (firstLoad) {
-          startPosition = { x: x, y: y - player.height };
-          player.x = startPosition.x;
-          player.y = startPosition.y;
-          firstLoad = false;
+        if (gameState.firstLoad) {
+          gameState.startPosition = { x: x, y: y - player.height };
+          player.x = gameState.startPosition.x;
+          player.y = gameState.startPosition.y;
+          gameState.firstLoad = false;
         }
       } else if (def.type === 'spike') {
-        objects.spikes.push(props);
+        gameState.objects.spikes.push(props);
       } else if (def.type === 'enemy') {
-        objects.enemies.push({
+        gameState.objects.enemies.push({
           ...props,
           dx: 0.8,
           dir: 1,
@@ -616,13 +646,12 @@ function buildLevelFromMap() {
           counter: 0
         });
       } else if (def.type === 'coin') {
-        if (!objects.coins) objects.coins = [];
         const key = `${x},${y}`;
-        objects.coins.push({ ...props, type: 'coin', key, collected: false });
+        gameState.objects.coins.push({ ...props, type: 'coin', key, collected: false });
       } else if (def.type === 'life') {
-        if (!objects.lives) objects.lives = [];
         const key = `${x},${y}`;
-        objects.lives.push({ ...props, type: 'life', color: def.color, key, collected: collectedLifeKeys.has(key) });
+        gameState.objects.lives.push({ ...props, type: 'life', color: def.color, key, collected: gameState.collectedLifeKeys.has(key) });
+        
       }
 
       levelMinY = Math.min(levelMinY, y);
@@ -630,15 +659,17 @@ function buildLevelFromMap() {
     });
   });
 
-  if (!startPosition) {
-    startPosition = { x: 100, y: 550 };
-    if (firstLoad) {
-      player.x = startPosition.x;
-      player.y = startPosition.y;
-      firstLoad = false;
+  if (!gameState.startPosition) {
+    gameState.startPosition = { x: 100, y: 550 };
+    if (gameState.firstLoad) {
+      player.x = gameState.startPosition.x;
+      player.y = gameState.startPosition.y;
+      gameState.firstLoad = false;
     }
   }
 }
+
+
 
 function checkCollision(a, b) {
   return (
@@ -673,7 +704,7 @@ function resolveCollision(r) {
 
 function enforceCollisions() {
   // Verifica colisões com todos os tiles sólidos
-  objects.tiles
+  gameState.objects.tiles
     .filter(t => t.type === "ground" || t.type === "ground-grass" || 
              t.type === "ground-grass-right" || t.type === "ground-grass-left")
     .forEach(tile => {
@@ -683,7 +714,7 @@ function enforceCollisions() {
     });
   
   // Verifica colisões com plataformas
-  objects.platforms.forEach(p => {
+  gameState.objects.platforms.forEach(p => {
     if (checkCollision(player, p)) {
       resolveCollision(p);
     }
@@ -702,6 +733,8 @@ function pauseGameForSeconds(seconds) {
 
 
 
+
+
 async function handleDeath() {
     if (isDying) return;
     isDying = true;
@@ -713,45 +746,43 @@ async function handleDeath() {
         livesDisplay.classList.add('hidden');
         await pauseGameForSeconds(1);
         isGamePaused = true;
-        
-        // Armazena o tempo final quando perde todas as vidas
         finalTime = elapsedTime;
-    // No handleDeath() quando game over ocorre
-const finalTimeDisplay = document.getElementById('final-time-display');
-if (finalTimeDisplay) {
-  const minutes = Math.floor(finalTime / 60000);
-  const seconds = Math.floor((finalTime % 60000) / 1000);
-  const milliseconds = Math.floor(finalTime % 1000);
-  finalTimeDisplay.textContent = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(milliseconds).padStart(3, '0')}`;
-}
-        console.log("Tempo final:", finalTime);
         
         // Mostrar tela de game over
         showScreen('gameover-screen');
-        
-        // Depois de 9 segundos, voltar completamente para o início
         setTimeout(() => {
-            // 1. Parar completamente o jogo
+  const finalTimeDisplay = document.getElementById('final-time-display');
+  if (finalTimeDisplay) {
+    const minutes = Math.floor(finalTime / 60000);
+    const seconds = Math.floor((finalTime % 60000) / 1000);
+    const milliseconds = Math.floor(finalTime % 1000);
+    finalTimeDisplay.textContent =
+      `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(milliseconds).padStart(3, '0')}`;
+  }
+}, 50);
+        
+        setTimeout(() => {
             if (animationFrameId) {
                 cancelAnimationFrame(animationFrameId);
             }
             
-            // 2. Resetar TODOS os estados do jogo
+            // Reseta o estado usando gameState
             lives = 3;
             isDying = false;
             isGamePaused = false;
-            lastCheckpoint = null;
-            collectedLifeKeys.clear();
+            gameState.lastCheckpoint = null; // ← Atualizado
+            gameState.collectedLifeKeys = new Set(); // ← Atualizado
             cameraX = 0;
             cameraY = 0;
-            firstLoad = true;
+            gameState.firstLoad = true; // ← Atualizado
+             gameState.collectedLifeKeys = new Set();
             
-            // 3. Reconstruir todos os objetos do jogo
-            objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], coins: [], finish: null };
+            // Reconstroi os objetos do jogo
+            gameState.objects = { tiles: [], platforms: [], checkpoints: [], spikes: [], enemies: [], lives: [], coins: [], finish: null };
             buildLevelFromMap();
             
-            // 4. Resetar o jogador
-            const spawn = startPosition || { x: 100, y: 550 };
+            // Reseta o jogador usando gameState.startPosition
+            const spawn = gameState.startPosition || { x: 100, y: 550 }; // ← Atualizado
             Object.assign(player, spawn, { 
                 dx: 0, 
                 dy: 0,
@@ -760,13 +791,8 @@ if (finalTimeDisplay) {
                 jumpPressed: false
             });
             
-            // 5. Resetar o timer
             resetTimer();
-            
-            // 6. Mostrar a tela inicial como novo jogo
             showScreen('start-screen');
-            
-            // 7. Resetar a exibição de vidas
             livesDisplay.textContent = lives;
             livesDisplay.classList.remove('hidden');
         }, 9000);
@@ -782,7 +808,8 @@ if (finalTimeDisplay) {
 
     await pauseGameForSeconds(1);
 
-    const spawn = lastCheckpoint || startPosition;
+    // Usa gameState.lastCheckpoint
+    const spawn = gameState.lastCheckpoint || gameState.startPosition; // ← Atualizado
     Object.assign(player, spawn, { 
         dx: 0, 
         dy: 0,
@@ -795,13 +822,13 @@ if (finalTimeDisplay) {
 }
 
 function checkCheckpointCollision() {
-  objects.checkpoints.forEach(cp => {
+  gameState.objects.checkpoints.forEach(cp => { // ← Atualizado
     if (!cp.active) return;
 
     const fake = { x: cp.x, y: cp.y - 40, width: 4, height: 40 };
     if (checkCollision(player, fake)) {
       cp.active = false;
-      lastCheckpoint = { x: cp.x, y: cp.y - player.height - 1 };
+      gameState.lastCheckpoint = { x: cp.x, y: cp.y - player.height - 1 }; // ← Atualizado
       soundCheckpoint.play();
       createConfettiExplosion(cp.x + 20, cp.y);
     }
@@ -812,24 +839,22 @@ const deathYLimit = 3000; // ajuste se necessário
 
 
 function update() {
-
-  
   if (isGamePaused) return;
-  
-  // Cálculo normal de movimento
-  if (keys.left) player.dx = -4;
-  else if (keys.right) player.dx = 4;
+
+  // Cálculo normal de movimento com gameSettings
+  if (keys.left) player.dx = -gameSettings.playerSpeed;
+  else if (keys.right) player.dx = gameSettings.playerSpeed;
   else player.dx *= friction;
 
   if (keys.jump && !player.jumpPressed) {
     if (!player.jumping) {
-      player.dy = -11;
+      player.dy = gameSettings.jumpForce;
       player.jumping = true;
       player.canDoubleJump = true;
       player.jumpPressed = true;
       soundJump.play();
     } else if (player.canDoubleJump) {
-      player.dy = -8;
+      player.dy = gameSettings.doubleJumpForce;
       player.canDoubleJump = false;
       player.jumpPressed = true;
       soundJump.play();
@@ -842,11 +867,10 @@ function update() {
   player.x += player.dx;
   player.y += player.dy;
 
-  // Verificação EXTRA de colisões (garante que nunca caia)
   enforceCollisions();
 
-  objects.platforms.forEach(resolveCollision);
-  objects.tiles
+  gameState.objects.platforms.forEach(resolveCollision);
+  gameState.objects.tiles
     .filter(t => t.type === "ground" || t.type === "ground-grass" || 
              t.type === "ground-grass-right" || t.type === "ground-grass-left")
     .forEach(tile => {
@@ -864,7 +888,7 @@ function update() {
       }
     });
 
-  if (objects.spikes.some(s => {
+  if (gameState.objects.spikes.some(s => {
     const reducedSpike = {
       x: s.x + 6,
       y: s.y + 4,
@@ -873,18 +897,18 @@ function update() {
     };
     return checkCollision(player, reducedSpike);
   })) {
-     if (!isDying) soundSpike.play();
+    if (!isDying) soundSpike.play();
     handleDeath();
   }
-  
-  if (objects.tiles.some(t => t.type === "water" && checkCollision(player, t))) {
+
+  if (gameState.objects.tiles.some(t => t.type === "water" && checkCollision(player, t))) {
     if (!isDying) soundWater.play();
     handleDeath();
   }
-  
-if (player.y > deathYLimit) handleDeath();
 
-  objects.enemies = objects.enemies.filter(e => {
+  if (player.y > deathYLimit) handleDeath();
+
+  gameState.objects.enemies = gameState.objects.enemies.filter(e => {
     if (e.state === 'die') {
       e.counter++;
       if (e.counter >= e.delay) {
@@ -896,7 +920,7 @@ if (player.y > deathYLimit) handleDeath();
       }
       return true;
     }
-    
+
     checkpointSprite.delayCounter++;
     if (checkpointSprite.delayCounter >= checkpointSprite.frameDelay) {
       checkpointSprite.delayCounter = 0;
@@ -928,8 +952,8 @@ if (player.y > deathYLimit) handleDeath();
       e.frame = (e.frame + 1) % 3;
     }
 
-    if (objects.tiles.some(t => t.type === "ground" && checkCollision(e, t))) e.dir *= -1;
-    if (objects.platforms.some(p => checkCollision(e, p))) e.dir *= -1;
+    if (gameState.objects.tiles.some(t => t.type === "ground" && checkCollision(e, t))) e.dir *= -1;
+    if (gameState.objects.platforms.some(p => checkCollision(e, p))) e.dir *= -1;
 
     const playerFeet = {
       x: player.x + 6,
@@ -949,74 +973,76 @@ if (player.y > deathYLimit) handleDeath();
       e.frame = 0;
       e.counter = 0;
       e.frameMax = 3;
-      player.dy = -8;
+      player.dy = gameSettings.jumpForce; // Usa o mesmo impulso do pulo
       soundEnemyDie.play();
       return true;
     }
 
-  // Na colisão com inimigos:
-if (checkCollision(player, e)) {
-    if (!isDying) soundEnemy.play();
-    handleDeath();
-}
+    if (checkCollision(player, e)) {
+      if (!isDying) soundEnemy.play();
+      handleDeath();
+    }
 
     return true;
   });
 
   checkCheckpointCollision();
 
-  if (objects.lives) {
-    objects.lives = objects.lives.filter(life => {
-      if (!life.collected && checkCollision(player, life)) {
-        life.collected = true;
-        collectedLifeKeys.add(life.key);
-        lives++;
-        livesDisplay.textContent = lives;
-        livesDisplay.classList.remove('hidden');
-        soundLife.play();
+if (gameState.objects.lives) {
+    gameState.objects.lives = gameState.objects.lives.filter(life => {
+        if (!life.collected && checkCollision(player, life)) {
+            life.collected = true;
+            gameState.collectedLifeKeys.add(life.key); // ← Agora usando gameState
+            
+            // Atualiza a exibição de vidas
+            lives++;
+            livesDisplay.textContent = lives;
+            livesDisplay.classList.remove('hidden');
+            
+            // Toca o efeito sonoro
+            soundLife.play();
+            return false; // Remove esta vida do array
+        }
+        return true; // Mantém esta vida no array
+    });
+}
+
+  if (gameState.objects.coins) {
+    gameState.objects.coins = gameState.objects.coins.filter(coin => {
+      if (!coin.collected && checkCollision(player, coin)) {
+        coin.collected = true;
+        soundCoin.play();
+        score += 10;
+        document.getElementById('score-display').textContent = score;
+        createCoinSparkle(coin.x + coin.width / 2, coin.y + coin.height / 2);
         return false;
       }
       return true;
     });
   }
 
-if (objects.coins) {
-  objects.coins = objects.coins.filter(coin => {
-    if (!coin.collected && checkCollision(player, coin)) {
-      coin.collected = true;
-      soundCoin.play();
-      score += 10;
-      document.getElementById('score-display').textContent = score;
-      createCoinSparkle(coin.x + coin.width / 2, coin.y + coin.height / 2);
-      return false;
-    }
-    return true;
-  });
-}
-
-// Na verificação do finish - quando completa a fase:
-if (objects.finish && objects.finish.active) {
+// Em game.js, na função update
+if (gameState.objects.finish && gameState.objects.finish.active) {
     const finishBox = {
-        x: objects.finish.x,
-        y: objects.finish.y - 40,
+        x: gameState.objects.finish.x,
+        y: gameState.objects.finish.y - 40,
         width: 40,
         height: 120
     };
     if (checkCollision(player, finishBox)) {
-        objects.finish.active = false;
-        
-        // ⏱️ Pausa o timer imediatamente
+        gameState.objects.finish.active = false;
         stopTimer();
-        
-        // ⏱️ Armazena o tempo final quando completa a fase
         finalTime = elapsedTime;
-        console.log("Tempo final (fase completa):", finalTime);
-        
         soundFinish.play();
         isGamePaused = true;
+        
+        const totalCoins = gameState.objects.coins ? gameState.objects.coins.length : 0;
+        const collectedCoins = gameState.objects.coins ? 
+            gameState.objects.coins.filter(c => c.collected).length : 0;
+        
         setTimeout(() => {
-            window.location.href = "index2.html";
-        }, 2000);
+            levelScreens.showLevelComplete(score, finalTime, collectedCoins, totalCoins);
+        }, 1500);
     }
 }
 
@@ -1044,7 +1070,6 @@ if (objects.finish && objects.finish.active) {
     playerSprite.frame = (playerSprite.frame + 1) % maxFrames[playerSprite.state];
   }
 
-  // Atualiza partículas das moedas
   for (let i = 0; i < coinParticles.length; i++) {
     const p = coinParticles[i];
     p.x += p.vx;
@@ -1059,7 +1084,6 @@ if (objects.finish && objects.finish.active) {
     }
   }
 
-  // Atualiza partículas do checkpoint
   for (let i = 0; i < confettiParticles.length; i++) {
     const p = confettiParticles[i];
     p.x += p.vx;
@@ -1075,15 +1099,27 @@ if (objects.finish && objects.finish.active) {
   }
 }
 
+
 function draw() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
+
   // Paralaxe de montanhas
   const parallaxX = -cameraX * 0.3;
   ctx.drawImage(mountainLayer, parallaxX, canvas.height - 450);
 
+  // --- ADICIONE ESTES LOGS AQUI ---
+ 
+  if (gameState.objects.lives.length > 0) {
+      gameState.objects.lives.forEach((life, index) => {
+          
+      });
+  } else {
+     
+  }
+ 
+
   // Desenha tiles do cenário
-  objects.tiles.forEach(tile => {
+  gameState.objects.tiles.forEach(tile => {
     if (tile.type === "ground" && images.ground.complete) {
       ctx.drawImage(images.ground, tile.x - cameraX, tile.y - cameraY, tile.width, tile.height);
     } else if (tile.type === "ground-fake" && images.ground.complete) {
@@ -1109,7 +1145,7 @@ function draw() {
   });
 
   // Desenha plataformas
-  objects.platforms.forEach(p => {
+  gameState.objects.platforms.forEach(p => {
     if (images.platform.complete) {
       ctx.drawImage(images.platform, p.x - cameraX, p.y - cameraY, p.width, p.height);
     } else {
@@ -1119,14 +1155,14 @@ function draw() {
   });
 
   // Desenha espinhos
-  objects.spikes.forEach(s => {
+  gameState.objects.spikes.forEach(s => {
     if (images.spike.complete) {
       ctx.drawImage(images.spike, s.x - cameraX, s.y - cameraY, s.width, s.height);
     }
   });
 
   // Desenha checkpoints
-  objects.checkpoints.forEach(cp => {
+  gameState.objects.checkpoints.forEach(cp => {
     ctx.drawImage(
       checkpointSprite.image,
       checkpointSprite.currentFrame * checkpointSprite.frameWidth, 0,
@@ -1137,20 +1173,20 @@ function draw() {
   });
 
   // Desenha finish
-  if (objects.finish) {
+  if (gameState.objects.finish) {
     ctx.drawImage(
       finishSprite.image,
       finishSprite.currentFrame * finishSprite.frameWidth, 0,
       finishSprite.frameWidth, finishSprite.frameHeight,
-      objects.finish.x - cameraX,
-      objects.finish.y - cameraY - finishSprite.frameHeight + 40,
+      gameState.objects.finish.x - cameraX,
+      gameState.objects.finish.y - cameraY - finishSprite.frameHeight + 40,
       finishSprite.frameWidth,
       finishSprite.frameHeight
     );
   }
 
   // Desenha inimigos
-  objects.enemies.forEach(e => {
+  gameState.objects.enemies.forEach(e => {
     const eSpriteSet = e.state;
     const eFrame = e.frame;
     const eFlipped = e.dir < 0 ? 'Flipped' : '';
@@ -1167,20 +1203,25 @@ function draw() {
   });
 
   // Desenha vidas
-  if (objects.lives) {
-    objects.lives.forEach(life => {
-      const sx = lifeSprite.currentFrame * lifeSprite.frameWidth;
-      ctx.drawImage(
-        lifeSprite.image,
-        sx, 0, lifeSprite.frameWidth, lifeSprite.frameHeight,
-        life.x - cameraX, life.y - cameraY,
-        life.width, life.height
-      );
-    });
-  }
+if (gameState.objects.lives) {
+    
+    gameState.objects.lives.forEach(life => {
+        // Adicione este log dentro do loop
+        
 
-  if (objects.coins) {
-    objects.coins.forEach(coin => {
+        // AQUI ESTÁ SEU CÓDIGO ATUAL QUE NÃO TEM O if (!life.collected)
+        const sx = lifeSprite.currentFrame * lifeSprite.frameWidth;
+        ctx.drawImage(
+            lifeSprite.image,
+            sx, 0, lifeSprite.frameWidth, lifeSprite.frameHeight,
+            life.x - cameraX, life.y - cameraY,
+            life.width, life.height
+        );
+    });
+}
+
+  if (gameState.objects.coins) {
+    gameState.objects.coins.forEach(coin => {
       const sx = coinSprite.currentFrame * coinSprite.frameWidth;
       ctx.drawImage(
         coinSprite.image,
@@ -1207,7 +1248,7 @@ function draw() {
   });
 
   // Verifica colisão com água
-  const isInWater = objects.tiles.some(tile => 
+  const isInWater = gameState.objects.tiles.some(tile => 
     tile.type === "water" && 
     player.x + player.width > tile.x && 
     player.x < tile.x + tile.width && 
@@ -1273,25 +1314,36 @@ function loop(timestamp) {
 function initGame() {
   resizeCanvas();
   window.addEventListener("resize", resizeCanvas);
-  buildLevelFromMap();
- 
 
+  // Inicializa o sistema de níveis
+  levels.init();
+
+  // Configura o botão de início
+  document.getElementById('start-btn').addEventListener('click', () => {
+    levels.loadLevel(0); // Carrega o nível 0 (primeiro nível)
+    levelScreens.showLevelIntro(levels.getCurrentLevel().name);
+  });
+
+  // Mostra a vinheta apenas se NÃO foi vista antes
   const hasSeenIntro = sessionStorage.getItem('vinheta-exibida');
-
+  
   if (!hasSeenIntro) {
     showScreen('intro-screen');
     setTimeout(() => {
       showScreen('vinheta-screen');
     }, 3000);
-    sessionStorage.setItem('vinheta-exibida', 'true');
   } else {
     showScreen('start-screen');
   }
-
-  [soundLife, soundSpike, soundCoin, soundWater, soundEnemy, soundEnemyDie, soundCheckpoint, soundFinish, soundJump].forEach(sound => {
+  
+  // Configura o volume dos efeitos sonoros
+  [soundLife, soundSpike, soundCoin, soundWater, soundEnemy, soundEnemyDie, 
+   soundCheckpoint, soundFinish, soundJump].forEach(sound => {
     if (sound) sound.volume = 0.7;
   });
 }
+
+
 
 
 document.addEventListener("keydown", e => {
@@ -1314,35 +1366,32 @@ document.getElementById("jump").ontouchstart = () => keys.jump = true;
 document.getElementById("jump").ontouchend = () => keys.jump = false;
 
 // Event listeners para os botões das telas
-document.getElementById('start-btn').addEventListener('click', startGame);
+
+
 
 document.getElementById('resume-btn').addEventListener('click', togglePause);
 document.getElementById('menu-btn').addEventListener('click', togglePause);
-document.getElementById('save-btn').addEventListener('click', () => {
-  alert('Jogo salvo! (funcionalidade não implementada)');
-});
 
-// 🎯 Pausar automaticamente se a aba for minimizada ou a janela for escondida
-document.addEventListener('visibilitychange', () => {
-  if (document.hidden) {
-    // A aba foi minimizada ou perdeu foco → pausa o jogo
-    if (!isGamePaused) {
-      togglePause(); // pausa se ainda não estiver pausado
-    }
-  } else {
-    // A aba voltou ao foco → retoma se estava pausado por isso
-    // Só despausa se foi pausado por "visibilitychange", então usamos uma flag
-    if (document.getElementById('pause-screen').classList.contains('visible-by-focus')) {
-      togglePause();
-      document.getElementById('pause-screen').classList.remove('visible-by-focus');
-    }
-  }
-});
+
+
 
 
 // Inicializa o jogo quando o DOM estiver pronto
 document.addEventListener("DOMContentLoaded", initGame);
 
 document.getElementById('vinheta-ok-btn').addEventListener('click', () => {
+  // Toca a música de início apenas se não estiver tocando já
+  if (currentMusic !== musicStart) {
+    if (currentMusic) {
+      currentMusic.pause();
+      currentMusic.currentTime = 0;
+    }
+    musicStart.loop = false;
+    musicStart.play().catch(e => console.log("Erro ao tocar música inicial:", e));
+    currentMusic = musicStart;
+  }
   showScreen('start-screen');
 });
+
+
+export { startGame, formatTime, finalTime, currentMusic, playMusic};  // Export múltiplo

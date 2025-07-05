@@ -534,3 +534,49 @@ button {
   margin-bottom: 20px;
   
 }
+
+/* Telas de Nível */
+#level-intro-screen, #level-complete-screen {
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 2500;
+}
+
+#level-intro-screen h1 {
+    font-size: 3rem;
+    color: #4CAF50;
+    margin-bottom: 20px;
+    text-shadow: 0 0 10px rgba(76, 175, 80, 0.7);
+    animation: pulse 2s infinite;
+}
+
+.level-number {
+    font-size: 1.5rem;
+    color: #FFC107;
+    margin-bottom: 30px;
+    font-family: 'Press Start 2P', monospace;
+}
+
+.results {
+    margin: 30px 0;
+    font-size: 1.2rem;
+}
+
+.result-row {
+    display: flex;
+    justify-content: space-between;
+    margin: 15px 0;
+    padding: 10px;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 5px;
+}
+
+.result-value {
+    color: #FFC107;
+    font-weight: bold;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}

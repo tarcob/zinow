@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
   <meta charset="UTF-8" />
-  <title>ZINO WORDLD</title>
+  <title>ZINUS'WORLD</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
   <link rel="manifest" href="manifest.json" />
   <link rel="stylesheet" href="css/style.css?v=1.0.2">
@@ -60,6 +60,43 @@
     </div>
   </div>
 
+  <!-- Tela de Nível -->
+<div id="level-screen" class="screen hidden">
+  <div class="screen-content no-bg">
+    <h1 id="level-number">Nível 1</h1>
+    <h2 id="level-name">Floresta Inicial</h2>
+    <div class="level-preview"></div>
+  </div>
+</div>
+
+<!-- Tela de Resultados -->
+<div id="results-screen" class="screen hidden">
+  <div class="screen-content">
+    <h1>Nível Completo!</h1>
+    <div class="results-grid">
+      <div class="result-item">
+        <span class="result-label">Nível:</span>
+        <span class="result-value" id="result-level">1</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Pontuação:</span>
+        <span class="result-value" id="result-score">0</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Tempo:</span>
+        <span class="result-value" id="result-time">00:00</span>
+      </div>
+      <div class="result-item">
+        <span class="result-label">Vidas Restantes:</span>
+        <span class="result-value" id="result-lives">3</span>
+      </div>
+    </div>
+    <button id="next-level-btn" class="menu-btn">Próximo Nível</button>
+    <button id="retry-level-btn" class="menu-btn">Repetir Nível</button>
+    <button id="main-menu-btn" class="menu-btn">Menu Principal</button>
+  </div>
+</div>
+
   <!-- Jogo em si -->
   <div id="game-container" class="hidden">
     <div id="container">
@@ -110,6 +147,9 @@
   <audio id="sound-finish">
     <source src="sound/finish.mp3" type="audio/mpeg">
   </audio>
+   <audio id="sound_complete">
+    <source src="sound/level_complete.mp3" type="audio/mpeg">
+  </audio>
   <audio id="sound-jump">
     <source src="sound/jump.mp3" type="audio/mpeg">
   </audio>
@@ -134,7 +174,7 @@
 
 
 
-  <script src="js/game.js?v=1.0.2"></script>
+  
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -144,5 +184,6 @@
       });
     }
   </script>
+  <script  type="module" src="js/game.js?v=1.0.2"></script>
 </body>
 </html>
