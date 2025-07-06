@@ -1358,12 +1358,20 @@ document.addEventListener("keyup", e => {
   if (e.key === " " || e.key === "ArrowUp") keys.jump = false;
 });
 
-document.getElementById("left").ontouchstart = () => keys.left = true;
-document.getElementById("left").ontouchend = () => keys.left = false;
-document.getElementById("right").ontouchstart = () => keys.right = true;
-document.getElementById("right").ontouchend = () => keys.right = false;
-document.getElementById("jump").ontouchstart = () => keys.jump = true;
-document.getElementById("jump").ontouchend = () => keys.jump = false;
+const leftBtn = document.getElementById("left");
+const rightBtn = document.getElementById("right");
+const jumpBtn = document.getElementById("jump");
+
+if (leftBtn && rightBtn && jumpBtn) { // Verifica se os botões existem
+    leftBtn.addEventListener("touchstart", () => keys.left = true, { passive: true });
+    leftBtn.addEventListener("touchend", () => keys.left = false, { passive: true });
+    
+    rightBtn.addEventListener("touchstart", () => keys.right = true, { passive: true });
+    rightBtn.addEventListener("touchend", () => keys.right = false, { passive: true });
+    
+    jumpBtn.addEventListener("touchstart", () => keys.jump = true, { passive: true });
+    jumpBtn.addEventListener("touchend", () => keys.jump = false, { passive: true });
+}
 
 // Event listeners para os botões das telas
 
