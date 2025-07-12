@@ -1,91 +1,114 @@
-import { startGame, formatTime, currentMusic, finalTime,  playMusic  } from './game.js';
-import { levels, gameState } from './levels.js';  // Adicione esta linha
+import { startGame, formatTime, finalTime, audio as audioManager } from './game.js';
+import { levels, gameState } from './levels.js';
 
-
-// js/screens.js - Novo arquivo para gerenciar telas adicionais
+// Gerenciador de telas (screens)
 const levelScreens = {
-    showLevelIntro: function(levelName) {
-    // Remove a tela anterior se existir
+  showLevelIntro: function (levelName) {
+    // Remove tela anterior se existir
     const existingScreen = document.getElementById('level-intro-screen');
     if (existingScreen) {
-        document.body.removeChild(existingScreen);
+      document.body.removeChild(existingScreen);
     }
 
+    // Cria nova tela de introdução do nível
     const screen = document.createElement('div');
     screen.id = 'level-intro-screen';
     screen.className = 'screen';
     screen.innerHTML = `
-        <div class="screen-content">
-            <h1>${levelName}</h1>
-            <div class="level-number">Nível ${levels.currentLevel + 1}/${levels.totalLevels}</div>
-            <button id="start-level-btn" class="menu-btn">Começar</button>
-        </div>
+      <div class="screen-content">
+        <h1>${levelName}</h1>
+        <div class="level-number">Nível ${levels.currentLevel + 1}/${levels.totalLevels}</div>
+        <button id="start-level-btn" class="menu-btn">Começar</button>
+      </div>
     `;
-    
     document.body.appendChild(screen);
+
     
-    // Adiciona o event listener CORRETAMENTE
+
+    
+
+    // Botão "Começar"
     document.getElementById('start-level-btn').addEventListener('click', () => {
-        document.body.removeChild(screen);
-        startGame(); // Chama a função diretamente
+      document.body.removeChild(screen);
+      startGame(); // Inicia o nível
     });
-    
-    // Toca o som de introdução
-    //const introMusic = new Audio('sound/intro.mp3');
-//introMusic.loop = false;
-//playMusic(introMusic);
-    
-},
-    
-showLevelComplete: function(score, time, collectedCoins, totalCoins) {
-  const screen = document.getElementById('results-screen');
-  screen.classList.remove('hidden');
 
-  // Atualiza os valores nos elementos existentes
-  document.getElementById('result-score').textContent = score;
-  document.getElementById('result-time').textContent = formatTime(time, true);
-  document.getElementById('result-level').textContent = levels.getCurrentLevel().number || 1;
-  document.getElementById('result-lives').textContent = gameState.lives || 3;
-
-  // Se quiser exibir também moedas:
-  const coinElement = document.getElementById('result-coins');
-  if (coinElement) {
-    coinElement.textContent = `${collectedCoins}/${totalCoins}`;
-  }
-
-  // Botão: Próximo Nível
-  const nextBtn = document.getElementById('next-level-btn');
-  nextBtn.onclick = () => {
-    screen.classList.add('hidden');
-    if (levels.nextLevel()) {
-      this.showLevelIntro(levels.getCurrentLevel().name);
+    // Toca música de introdução do nível (opcional)
+    const introMusic = levels.getCurrentLevel()?.introMusic;
+    if (introMusic) {
+      audioManager.playMusic(introMusic, false); // false = sem loop
     } else {
-      showScreen('start-screen');
+      audioManager.stopMusic(); // Ou para qualquer música anterior
     }
-  };
+  },
 
-  // Botão: Repetir Nível
-  const retryBtn = document.getElementById('retry-level-btn');
-  retryBtn.onclick = () => {
-    screen.classList.add('hidden');
-    levels.reloadLevel();
-    startGame();
-  };
+showLevelComplete: function (score, time, collectedCoins, totalCoins) {
+    const screen = document.getElementById('results-screen');
+    screen.classList.remove('hidden');
 
-  // Botão: Menu Principal
-  const menuBtn = document.getElementById('main-menu-btn');
-  menuBtn.onclick = () => {
-    screen.classList.add('hidden');
+    // Atualiza estatísticas na tela
+    document.getElementById('result-score').textContent = score;
+    document.getElementById('result-time').textContent = formatTime(time, true);
+    document.getElementById('result-level').textContent = levels.currentLevel + 1; // Nível atual (1-based)
+    document.getElementById('result-lives').textContent = gameState.lives || 3;
+    
+    // Adiciona o título do nível
+    const levelTitle = document.createElement('h2');
+    levelTitle.textContent = levels.getCurrentLevel().name;
+    const existingTitle = screen.querySelector('h2');
+    if (existingTitle) {
+        existingTitle.replaceWith(levelTitle);
+    } else {
+        const h1 = screen.querySelector('h1');
+        h1.insertAdjacentElement('afterend', levelTitle);
+    }
+
+    const coinElement = document.getElementById('result-coins');
+    if (coinElement) {
+      coinElement.textContent = `${collectedCoins}/${totalCoins}`;
+    }
+
+    // Botão: Próximo nível
+    const nextBtn = document.getElementById('next-level-btn');
+   nextBtn.onclick = () => {
+  screen.classList.add('hidden');
+
+  if (levels.nextLevel()) {
+    // Para a música do nível anterior ANTES de iniciar o próximo
+    audioManager.stopMusic(); 
+    
+    this.showLevelIntro(levels.getCurrentLevel().name);
+  } else {
     showScreen('start-screen');
-  };
-
-  // Som de vitória
-  const victorySound = document.getElementById('sound_complete');
-  if (victorySound) {
-    victorySound.play().catch((e) => console.warn("Erro ao tocar som:", e));
   }
-}
+};
 
+    // Botão: Repetir nível
+    const retryBtn = document.getElementById('retry-level-btn');
+    retryBtn.onclick = () => {
+      screen.classList.add('hidden');
+      levels.reloadLevel();
+      startGame();
+    };
+
+    // Botão: Voltar ao menu principal
+    const menuBtn = document.getElementById('main-menu-btn');
+    menuBtn.onclick = () => {
+      screen.classList.add('hidden');
+      showScreen('start-screen');
+    };
+
+    // Som de vitória
+    const victorySound = document.getElementById('sound_complete');
+    if (victorySound) {
+      victorySound.play().catch((e) => console.warn("Erro ao tocar som:", e));
+    }
+
+    // Música de vitória (opcional)
+    if (levels.getCurrentLevel()?.victoryMusic) {
+      audioManager.playMusic(levels.getCurrentLevel().victoryMusic, false);
+    }
+  }
 };
 
 export { levelScreens };

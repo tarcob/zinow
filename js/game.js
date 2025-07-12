@@ -32,14 +32,12 @@ window.addEventListener('pageshow', (event) => {
 
 // Variáveis globais
 const objects = gameState.objects;
-
 const canvas = document.getElementById("game");
 const ctx = canvas.getContext("2d");
 const livesDisplay = document.getElementById("lives");
 const controlsHeight = 90;
 
 // Elementos de áudio
-
 const soundLife = document.getElementById('sound-life');
 const soundSpike = document.getElementById('sound-spike');
 const soundWater = document.getElementById('sound-water');
@@ -51,18 +49,11 @@ const soundJump = document.getElementById('sound-jump');
 const soundCoin = document.getElementById('sound-coin');
 const soundGameOver = document.getElementById('sound-gameover');
 
-const musicStart = document.getElementById('music-start');
-const musicGame = document.getElementById('music-game');
-const musicGameOver = document.getElementById('music-gameover');
-
-
-let currentMusic = null;
 let score = 0;
 let animationFrameId;
-//let firstLoad = true;
 let isGamePaused = false;
 let isFullscreen = false;
-let isDying = false; // Variável global para controlar o estado de morte
+let isDying = false;
 
 // Variáveis de controle de frame rate
 const targetFPS = 60;
@@ -81,6 +72,10 @@ let timerInterval = null;
 let finalTime = null; // ⏱️ será usado futuramente
 
 
+function getLevelWidth() {
+    return levels.getCurrentLevel().levelWidth || 5280; // Valor padrão caso não esteja definido
+}
+
 // Controle das telas
 function showScreen(screenId) {
   document.querySelectorAll('.screen').forEach(screen => {
@@ -88,97 +83,73 @@ function showScreen(screenId) {
   });
   document.getElementById(screenId).classList.remove('hidden');
 
-  let nextMusic = null;
-  let loop = true;
-
+  // Controle de música por tela
   if (screenId === 'game-container') {
-    if (currentMusic === musicGame) return;
-    nextMusic = musicGame;
-  } else if (screenId === 'start-screen') {
-    // Mantém a música de início se já estiver tocando (vinheta -> start-screen)
-    if (currentMusic !== musicStart) {
-      nextMusic = null;
-    }
+    audioManager.playMusic(levels.getCurrentLevel().music);
   } else if (screenId === 'gameover-screen') {
-    nextMusic = musicGameOver;
-    loop = false;
-  }
-
-  // ✅ Só troca a música se for diferente da atual
-  if (nextMusic !== currentMusic) {
-    if (currentMusic && currentMusic !== musicStart) { // Não pausa a musicStart se for manter
-      currentMusic.pause();
-      currentMusic.currentTime = 0;
-    }
-
-    if (nextMusic) {
-      nextMusic.loop = loop;
-      nextMusic.play().catch(e => console.log("Erro ao tocar música:", e));
-      currentMusic = nextMusic;
-    }
+    audioManager.playMusic('sound/gameover.mp3', false); // sem loop
+  } else if (screenId === 'start-screen') {
+    audioManager.playMusic('sound/intro.mp3', false); // ✅ toca SOMENTE na tela de Novo Jogo
+  } else {
+    audioManager.stopMusic(); // para em qualquer outra
   }
 }
 
 
 
-function playMusic(newMusic) {
-    if (currentMusic && currentMusic !== newMusic) {
-        currentMusic.pause();
-        currentMusic.currentTime = 0; // Opcional: Reinicia a música anterior
+// Sistema de Áudio melhorado
+const audioManager = {
+  currentMusic: null,
+  
+  playMusic: function(src, loop = true) {
+    if (this.currentMusic) {
+      this.currentMusic.pause();
+      this.currentMusic.currentTime = 0;
     }
-    currentMusic = newMusic;
-    if (currentMusic.paused) { // Só tenta tocar se não estiver já tocando
-        currentMusic.play().catch(e => console.log("Erro ao tocar música:", e));
+    
+    if (src) {
+      this.currentMusic = new Audio(src);
+      this.currentMusic.loop = loop;
+      this.currentMusic.volume = 0.6;
+      this.currentMusic.play()
+  .then(() => {
+    // tocou com sucesso
+  })
+  .catch(e => {
+    if (e.name !== 'AbortError') {
+      console.warn("Erro ao tocar música:", e);
     }
-}
-
-function pauseGameMusic() {
-  if (currentMusic && !currentMusic.paused) {
-    currentMusic.pause();
+  });
+    }
+  },
+  
+  stopMusic: function() {
+    if (this.currentMusic) {
+      this.currentMusic.pause();
+      this.currentMusic.currentTime = 0;
+    }
   }
-}
+};
+
+
 
 
 
 // Modifique a função startGame em game.js
 async function startGame() {
-    // Para a música atual se estiver tocando
-    if (currentMusic) {
-        currentMusic.pause();
-        currentMusic.currentTime = 0;
-    }
-
+    audioManager.stopMusic();
     const level = levels.getCurrentLevel();
+    audioManager.playMusic(level.music);
     
-    // Configura a música do nível atual (com tratamento de erro robusto)
-    if (level.music) {
-        currentMusic = new Audio(level.music);
-        currentMusic.loop = true;
-        currentMusic.volume = 0.6;
-
-        try {
-            await currentMusic.play().catch(e => {
-                // Ignora AbortError (interrupção normal ao trocar de música)
-                if (e.name !== 'AbortError') {
-                    console.warn("Erro ao tocar música do level:", e);
-                }
-            });
-        } catch (e) {
-            console.warn("Erro inesperado ao tocar música:", e);
-        }
-    }
-
-    // Reset do jogo (o restante permanece igual)
     resetTimer();
     showScreen('game-container');
-
-    lives = 3;
+    
     gameState.collectedLifeKeys = new Set();
     gameStartTime = performance.now();
     elapsedTime = 0;
     startTimer();
-
-    livesDisplay.textContent = lives;
+    
+    livesDisplay.textContent = gameState.lives;
     livesDisplay.classList.remove('hidden');
     isGamePaused = false;
 
@@ -213,25 +184,16 @@ function togglePause() {
 
   if (isGamePaused) {
     stopTimer();
-
-    // 🔒 Somente pausa a música atual, sem tocar nenhuma outra
-    if (currentMusic && !currentMusic.paused) {
-      currentMusic.pause();
-    }
-
+    // Remove a linha que para a música: audioManager.stopMusic();
+    
     document.getElementById('pause-screen').classList.add('visible-by-focus');
     document.getElementById('game-container').classList.add('hidden');
     document.getElementById('pause-screen').classList.remove('hidden');
-
   } else {
     gameStartTime = performance.now() - elapsedTime;
     startTimer();
-
-    // 🔒 Somente retoma a música que já estava tocando, sem trocar
-    if (currentMusic && currentMusic.paused) {
-      currentMusic.play().catch(e => console.log("Erro ao retomar música:", e));
-    }
-
+    // Remove a linha que retoma a música: audioManager.playMusic(levels.getCurrentLevel().music);
+    
     document.getElementById('pause-screen').classList.add('hidden');
     document.getElementById('pause-screen').classList.remove('visible-by-focus');
     document.getElementById('game-container').classList.remove('hidden');
@@ -264,6 +226,7 @@ function resetTimer() {
   elapsedTime = 0;
   timerDisplay.textContent = "00:00:000";
 }
+
 
 function formatTime(ms, showMilliseconds = false) {
   const minutes = Math.floor(ms / 60000);
@@ -474,11 +437,11 @@ function drawAnimatedWater(tile) {
 const keys = { left: false, right: false, jump: false };
 const gravity = gameSettings.gravity;
 const friction = gameSettings.friction;
-const levelWidth = 5280;
+
 
 let cameraX = 0, cameraY = 0, targetCameraX = 0, targetCameraY = 0;
-let lives = 3;
-//let lastCheckpoint = null;
+gameState.lives = 3;
+
 let levelMinY = Infinity, levelMaxY = -Infinity;
 
 const player = {
@@ -739,10 +702,10 @@ async function handleDeath() {
     if (isDying) return;
     isDying = true;
     
-    lives--;
-    livesDisplay.textContent = lives;
+    gameState.lives--;
+    livesDisplay.textContent = gameState.lives;
 
-    if (lives < 1) {
+    if (gameState.lives < 1) {
         livesDisplay.classList.add('hidden');
         await pauseGameForSeconds(1);
         isGamePaused = true;
@@ -767,7 +730,7 @@ async function handleDeath() {
             }
             
             // Reseta o estado usando gameState
-            lives = 3;
+            gameState.lives = 3;
             isDying = false;
             isGamePaused = false;
             gameState.lastCheckpoint = null; // ← Atualizado
@@ -793,7 +756,7 @@ async function handleDeath() {
             
             resetTimer();
             showScreen('start-screen');
-            livesDisplay.textContent = lives;
+            livesDisplay.textContent = gameState.lives;
             livesDisplay.classList.remove('hidden');
         }, 9000);
         
@@ -802,7 +765,7 @@ async function handleDeath() {
     }
 
     // Tocar som apenas uma vez
-    if (lives >= 0) {
+    if (gameState.lives >= 0) {
         soundSpike.play();
     }
 
@@ -995,8 +958,8 @@ if (gameState.objects.lives) {
             gameState.collectedLifeKeys.add(life.key); // ← Agora usando gameState
             
             // Atualiza a exibição de vidas
-            lives++;
-            livesDisplay.textContent = lives;
+            gameState.lives++;
+            livesDisplay.textContent = gameState.lives;
             livesDisplay.classList.remove('hidden');
             
             // Toca o efeito sonoro
@@ -1046,8 +1009,8 @@ if (gameState.objects.finish && gameState.objects.finish.active) {
     }
 }
 
-  player.x = Math.max(0, Math.min(player.x, levelWidth - player.width));
-  targetCameraX = Math.max(0, Math.min(player.x - canvas.width / 2, levelWidth - canvas.width));
+  player.x = Math.max(0, Math.min(player.x, getLevelWidth() - player.width));
+  targetCameraX = Math.max(0, Math.min(player.x - canvas.width / 2, getLevelWidth() - canvas.width));
   targetCameraY = Math.max(levelMinY, Math.min(player.y - canvas.height / 2, levelMaxY - canvas.height));
   cameraX += (targetCameraX - cameraX) * 0.1;
   cameraY += (targetCameraY - cameraY) * 0.1;
@@ -1318,11 +1281,15 @@ function initGame() {
   // Inicializa o sistema de níveis
   levels.init();
 
+
+
   // Configura o botão de início
-  document.getElementById('start-btn').addEventListener('click', () => {
-    levels.loadLevel(0); // Carrega o nível 0 (primeiro nível)
+document.getElementById('start-btn').addEventListener('click', () => {
+    audioManager.stopMusic();
+    levels.resetGame(); // Usa a nova função de reset
+    levels.loadLevel(0);
     levelScreens.showLevelIntro(levels.getCurrentLevel().name);
-  });
+});
 
   // Mostra a vinheta apenas se NÃO foi vista antes
   const hasSeenIntro = sessionStorage.getItem('vinheta-exibida');
@@ -1388,18 +1355,14 @@ document.getElementById('menu-btn').addEventListener('click', togglePause);
 document.addEventListener("DOMContentLoaded", initGame);
 
 document.getElementById('vinheta-ok-btn').addEventListener('click', () => {
-  // Toca a música de início apenas se não estiver tocando já
-  if (currentMusic !== musicStart) {
-    if (currentMusic) {
-      currentMusic.pause();
-      currentMusic.currentTime = 0;
-    }
-    musicStart.loop = false;
-    musicStart.play().catch(e => console.log("Erro ao tocar música inicial:", e));
-    currentMusic = musicStart;
-  }
-  showScreen('start-screen');
+  showScreen('start-screen'); // ✅ Sem tocar música aqui
 });
 
 
-export { startGame, formatTime, finalTime, currentMusic, playMusic};  // Export múltiplo
+
+export { 
+  startGame, 
+  formatTime, 
+  finalTime, 
+  audioManager as audio // Exporta o gerenciador de áudio com nome simplificado
+};
